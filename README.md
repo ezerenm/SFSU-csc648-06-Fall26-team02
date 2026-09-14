@@ -1,1 +1,1 @@
-# SFSU-csc648-06-fall26-team02
+# SFSU-csc648-06-Fall26-team02
