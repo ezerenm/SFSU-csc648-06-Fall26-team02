@@ -6,7 +6,7 @@ export default function CalvinsPage() {
             <h1>Calvin Mei</h1>
             <p>cmei@sfsu.edu</p>
             <p>Team 02</p>
-            <p>Front-End Master</p>
+            <p>Front-End Lead</p>
 
             <Image
                 src="/CM_CINE440-1.png"
