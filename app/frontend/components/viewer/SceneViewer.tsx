@@ -143,7 +143,63 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
          container.appendChild(labelRenderer.domElement);
          // 3D view drawer ------------------------
 
-         
+         // MOUSE CONTROLS ------------------------
+
+         const controls = new OrbitControls(camera, renderer.domElement);
+         // lets the user scroll to zoom, spin the view. Moves the camera.
+
+         controls.target.set(2, 0, -1);
+         // the middle of the n1 to n5 graph
+         // the point the camera is going to spin around
+         // ---------------------------------------
+
+         // LIGHTS --------------------------------
+
+         scene.add(new THREE.AmbientLight('white', 1.5));
+         // adding light everywhere so it isn't dark
+
+         scene.add(new THREE.DirectionalLight('white', 1));
+         // adding light to come from one direction to add shadows and shading to the model
+
+         // ---------------------------------------
+
+         // FLOOR ---------------------------------
+
+         if (modelUrl === null) {
+            // if no model file is found, make the floor plain
+
+            const floor = new THREE.Mesh(new THREE.BoxGeometry(12, 0.1, 18), new THREE.MeshStandardMaterial({ color: 'gray'}));
+            // gray box
+            // 12 meters wide, 0.1 meters thick, 18 meters long
+
+            floor.position.set(2, -0.05, -1);
+            // putting the floor under the graph
+            // y = 0
+
+            scene.add(floor);
+            // adding the floor to the 3d world
+
+         } else {
+            // there is a model file found, so we load it
+
+            new GLTFLoader().load(
+                // loading the .glb file
+
+                modelUrl,
+
+                (gltf) => scene.add(gltf.scene),
+                // when it finishes loading in, the model will be added to the 3d world
+                // scan = world coordinates system
+
+                undefined, 
+                
+                (error) => console.error('Model could not be loaded:', error)
+                // print error if loading fails
+            );
+         }
+
+
+         // ---------------------------------------
 
          
 
