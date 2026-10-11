@@ -294,7 +294,84 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
          // ---------------------------------------
     }, [modelUrl]);
 
-    
+    // DRAWING THE GRAPH --------------------------
+
+    useEffect(() => {
+        // run after world is created
+
+        const scene = sceneRef.current;
+        // taking the current 3d world from memory
+
+        if (scene === null) return;
+        // if there is no 3d world, then stop
+
+        const graph = buildGraph(nodes, segments, destinations);
+        // drawGraph.ts builds the spheres, lines, name tags
+
+        scene.add(graph);
+        // add to 3d world
+
+        return () => {
+            // clean up
+
+            scene.remove(graph);
+            
+            graph.traverse((child) => {
+
+                if (child instanceof THREE.Mesh || child instanceof THREE.Line) child.geometry.dispose();
+                // if its a sphere or line, free its memory
+
+                if ('element' in child && child.element instanceof HTMLElement) child.element.remove();
+                // if its a name tag, remove HTML <div>
+            });
+        };
+
+    }, [nodes, segments, destinations, sceneVersion]);
+    // run again when the dots, lines, or destinations update
+    // run again when theres a new sceneVersion
+
+    // -----------------------------------------
+
+    // DRAWING THE ROUTES ----------------------
+
+    useEffect(() => {
+        // runs when a new route is chosen 
+        // runs if the route color changes
+
+        const scene = sceneRef.current;
+        // take the current 3d world
+
+        if (scene === null || routeSteps.length === 0) return;
+        // if there is no 3d wolrd or route picked, skip since theres nothing to draw
+
+        const route = buildRoute(routeSteps, segments, routeColor);
+        // drawRoute.ts builds the tube for the route
+
+        if (route === null) return;
+        // stop if buildRoute returned nothing
+
+        scene.add(route);
+        // add the tube to the 3d world
+
+        return () => {
+            // clean up
+
+            scene.remove(route);
+            // take the old tube out of the 3d world
+
+            route.geometry.dispose()
+            // free the shape memory
+
+        };
+    }, [routeSteps, segments, routeColor, sceneVersion]);
+    // run again when the route, path, color, or world updates
+
+    // -----------------------------------------
+
+    return <div ref={containerRef} className="relative h-full w-full" />;
+    // the <div> containerRef points to
+
+}
 
 
 
