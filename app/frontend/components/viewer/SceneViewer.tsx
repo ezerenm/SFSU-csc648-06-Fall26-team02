@@ -198,8 +198,106 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
             );
          }
 
+         // ---------------------------------------
+
+         setSceneVersion((version) => version + 1);
+         // add 1 to the count
+         // alerts that the scene is built and routes/dots can be added now
+
+         // ANIMATION -----------------------------
+         
+         let frameId = 0;
+         // holds ID number the browser assigns the animation
+         // we can use this ID number to stop the loop
+
+         function animate() {
+            // makes one still of the 3D scene and repeats 60 times a second
+
+            frameId = requestAnimationFrame(animate);
+            // call animate again right before remaking the screen
+            // gives us ID number we can save and use to cancel 
+
+            controls.update();
+            // match camera to users draggin / scrolling
+            
+            renderer.render(scene, camera);
+            // takes 3D scene and remakes what the camera is currently seeing onto the screen
+
+            labelRenderer.render(scene, camera);
+            // does the same. but for HTML name tags of the dots
+            // tag sticks to the dots
+
+         }
+
+         animate();
+         // trigger animate
 
          // ---------------------------------------
+
+         // WINDOW SIZING -------------------------
+
+         function doResize() {
+            // function triggers when the browser window changes size
+
+            if (container === null) return;
+            // checks to make sure there is a 3d picture before measuring
+            // skip if theres nothing to measure
+
+            camera.aspect = container.clientWidth / container.clientHeight;
+            // aspect = width/height 
+            // alerts camera about the new screen shape
+
+            camera.updateProjectionMatrix();
+            // redo math with the new screen shape
+
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            // resizes the 3d view to the new width and height
+
+            labelRenderer.setSize(container.clientWidth, container.clientHeight);
+            // resizes the nametags as well
+
+         }
+
+         window.addEventListener('resize', doResize);
+         // tells browser to run doResize everytime the screen changes shape
+
+         // ---------------------------------------
+
+         // CLEAN UP ------------------------------
+
+         return () => {
+            // wipes everything when viewer leaves the page
+
+            cancelAnimationFrame(frameId);
+            // stops the animation with the ID number saved
+
+            window.removeEventListener('resize', doResize);
+            // stops listening for window shape changes
+
+            controls.dispose();
+            // shuts off mouse controls
+
+            renderer.dispose();
+            // frees memory
+
+            container.removeChild(renderer.domElement);
+            // takes 3d canvas out of the container
+
+            container.removeChild(labelRenderer.domElement);
+            // takes nametags out of the box
+
+            sceneRef.current = null;
+            // clears all memory of the 3d world
+
+         };
+
+         // ---------------------------------------
+    }, [modelUrl]);
+
+    
+
+
+
 
          
 
