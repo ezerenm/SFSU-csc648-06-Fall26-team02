@@ -1,3 +1,7 @@
+// Takes the route and turns it into one tube. Blue for human, orange for robot. 
+
+// IMPORTS --------------------------------------------------------------------
+
 import * as THREE from 'three';
 // three js library
 
@@ -10,6 +14,10 @@ import type { RouteStep } from './temporaryRoute';
 import { toVector } from './drawGraph';
 // function to turn a position into a Three.js point
 
+// ----------------------------------------------------------------------------
+
+// BUILDING ROUTE TUBE --------------------------------------------------------
+
 export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: string): THREE.Mesh | null {
     // turning the route steps into a big line like a tube
 
@@ -18,6 +26,8 @@ export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: s
 
     const points: THREE.Vector3[] = [];
     // every point in the route in order
+
+    // Collecting the points from the hallways --------------------------------
 
     for (const step of steps) {
         // going through the route one step at a time
@@ -42,16 +52,31 @@ export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: s
 
     }
 
+    // ------------------------------------------------------------------------
+
+    // Check to see if there is anything to draw ------------------------------
+
     if (points.length < 2) return null;
     // need at least two points to make a line
 
+    // ------------------------------------------------------------------------
+
+    // Turning points into a tube----------------------------------------------
+
     const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0);
-    // connecting points 
+    // connecting points by making a path that goes through all points in order
+    // if its false, don't go back to the start
+    // 0 at the end so it bends like hallways do
 
     const tube = new THREE.TubeGeometry(curve, points.length * 16, 0.12, 8, false);
-    // making a tibe along the path
+    // making a tube along the path by wrapping it. 
+    // points.length * 16 = how many pieces the tube is constructed of, the more the smoother
+    // 8 = how many sides around
+    // false = making sure the tube doesn't close as a loop
 
     return new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color }));
+
+    // ------------------------------------------------------------------------
 
 
 }

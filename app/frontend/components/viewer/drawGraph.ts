@@ -1,5 +1,7 @@
 // turns the graph data like nodes, halways, and destinations into 3d objects that viewers can show
 
+
+// IMPORTS --------------------------------------------------------------------
 import * as THREE from 'three';
 // three.js library
 
@@ -9,6 +11,9 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import type { Destination, GraphNode, PathSegment, Position } from './temporaryGraph';
 // the data tapes from temporary graph , changed later
+
+// ======--------------------------------------------------------------------
+
 
 // HELPER FOR POSITION -> ThreeJS point --------------------------------------
 

@@ -62,7 +62,7 @@ const positions: Record<string, Position> = {
     // where each node is on the temporary map
 
     N1: { x_m: 0, y_m: 0, z_m: 6 },
-    // the enterance
+    // the ente=rance
 
      N2: { x_m: 0, y_m: 0, z_m: -2 },
     // the corner of the hallway
@@ -78,7 +78,7 @@ const positions: Record<string, Position> = {
 };
 
 export const temporaryGraphNodes: GraphNode[] = [
-    { node_id: 'N1', label: 'Enterance', position: positions.N1 },
+    { node_id: 'N1', label: 'Entrance', position: positions.N1 },
     { node_id: 'N2', label: 'Corner of Hallway', position: positions.N2 },
     { node_id: 'N3', label: 'Room 103', position: positions.N3 },
     { node_id: 'N4', label: 'Side Hallway', position: positions.N4 },
