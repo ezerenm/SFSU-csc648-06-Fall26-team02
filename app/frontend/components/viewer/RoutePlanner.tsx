@@ -151,7 +151,7 @@ export default function RoutePlanner() {
                     Destination
                     <select className="rounded-md border border-white/20 bg-white/10 p-2 font-normal text-white" value={destinationId} onChange={(event) => setDestinationId(event.target.value)}>
                         {/*dropdown for destination*/}
-                        {temporaryGraphDestinations.map((item) => <option key={item.destination_id} value={item.destination_id} className="text-gray=900">{item.name}</option>)}
+                        {temporaryGraphDestinations.map((item) => <option key={item.destination_id} value={item.destination_id} className="text-gray-900">{item.name}</option>)}
                         {/*each destiantion has one option*/}
                         </select>
                 </label>
