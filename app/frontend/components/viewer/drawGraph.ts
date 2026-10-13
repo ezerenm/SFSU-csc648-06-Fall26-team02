@@ -45,7 +45,7 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
 
         const ball = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshBasicMaterial({ color: 'white' }));
 
-        ball.position.copy(toVector(node.position));
+        ball.position.copy(toVector(node.position, 0.3));
         // the ball is at the node's position
         
         group.add(ball);
