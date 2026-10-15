@@ -80,6 +80,9 @@ Open http://localhost:3000.
 | `/about` | Team page, rendered from the `team_members` table |
 | `/about/<name>` | Individual member page |
 | `/api/team` | JSON endpoint returning team data from Supabase |
+| `/api/graph?map_version_id=<uuid>` | M2 published demo graph and synthetic test-point options |
+| `/api/localization-attempts?map_version_id=<uuid>` | M2 synthetic attempt list/search with point and outcome filters |
+| `POST /api/route` | M2 manual routes using Sumit's integrated routing function |
 
 ## Git Workflow
 
@@ -106,6 +109,10 @@ Tables in the `public` schema:
 - `team_members`: team roster shown on the ABOUT page
 
 Row Level Security is enabled on both. `team_members` has a public read policy. `users` is not publicly readable.
+
+## M2 Backend
+
+See [the M2 handoff](milestones/M2/README.md) for the additive migration, labeled seed data, shared contracts, Section 4 draft and validation. Existing M0 tables stay unchanged. The spatial schema and synthetic seed are applied to shared Supabase and the APIs pass local HTTP checks against it. PR #34 generated an automatic Vercel preview; production deployment remains pending.
 
 ## Deployment
 

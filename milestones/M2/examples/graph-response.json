@@ -1,0 +1,432 @@
+{
+    "site": {
+        "name": "SYNTHETIC M2 demo",
+        "site_id": "10000000-0000-4000-8000-000000000001",
+        "is_test_site": true
+    },
+    "nodes": [
+        {
+            "label": "N1 Entrance",
+            "node_id": "30000000-0000-4000-8000-000000000001",
+            "position": {
+                "x_m": 0,
+                "y_m": 0,
+                "z_m": 0
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N2 Junction",
+            "node_id": "30000000-0000-4000-8000-000000000002",
+            "position": {
+                "x_m": 0,
+                "y_m": 0,
+                "z_m": 4
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N3 Room 103",
+            "node_id": "30000000-0000-4000-8000-000000000003",
+            "position": {
+                "x_m": 4,
+                "y_m": 0,
+                "z_m": 4
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N4 North turn",
+            "node_id": "30000000-0000-4000-8000-000000000004",
+            "position": {
+                "x_m": 0,
+                "y_m": 0,
+                "z_m": 8
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N5 Upper junction",
+            "node_id": "30000000-0000-4000-8000-000000000005",
+            "position": {
+                "x_m": 4,
+                "y_m": 0,
+                "z_m": 8
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N6 Lobby",
+            "node_id": "30000000-0000-4000-8000-000000000006",
+            "position": {
+                "x_m": 8,
+                "y_m": 0,
+                "z_m": 8
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N7 East junction",
+            "node_id": "30000000-0000-4000-8000-000000000007",
+            "position": {
+                "x_m": 8,
+                "y_m": 0,
+                "z_m": 4
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "N8 East room",
+            "node_id": "30000000-0000-4000-8000-000000000008",
+            "position": {
+                "x_m": 12,
+                "y_m": 0,
+                "z_m": 4
+            },
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        }
+    ],
+    "segments": [
+        {
+            "label": "S1 N1 to N2",
+            "geometry": [
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 0
+                },
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 4
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000001",
+            "end_node_id": "30000000-0000-4000-8000-000000000002",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000001",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S10 N1 to N4",
+            "geometry": [
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 0
+                },
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 8
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 8,
+            "segment_id": "40000000-0000-4000-8000-000000000010",
+            "end_node_id": "30000000-0000-4000-8000-000000000004",
+            "availability": "closed",
+            "robot_access": "restricted",
+            "start_node_id": "30000000-0000-4000-8000-000000000001",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S2 N2 to N3",
+            "geometry": [
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 4
+                },
+                {
+                    "x_m": 4,
+                    "y_m": 0,
+                    "z_m": 4
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000002",
+            "end_node_id": "30000000-0000-4000-8000-000000000003",
+            "availability": "open",
+            "robot_access": "restricted",
+            "start_node_id": "30000000-0000-4000-8000-000000000002",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S3 N2 to N4",
+            "geometry": [
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 4
+                },
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 8
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000003",
+            "end_node_id": "30000000-0000-4000-8000-000000000004",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000002",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S4 N4 to N5",
+            "geometry": [
+                {
+                    "x_m": 0,
+                    "y_m": 0,
+                    "z_m": 8
+                },
+                {
+                    "x_m": 4,
+                    "y_m": 0,
+                    "z_m": 8
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000004",
+            "end_node_id": "30000000-0000-4000-8000-000000000005",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000004",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S5 N5 to N3",
+            "geometry": [
+                {
+                    "x_m": 4,
+                    "y_m": 0,
+                    "z_m": 8
+                },
+                {
+                    "x_m": 4,
+                    "y_m": 0,
+                    "z_m": 4
+                }
+            ],
+            "direction": "start_to_end",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000005",
+            "end_node_id": "30000000-0000-4000-8000-000000000003",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000005",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S6 N5 to N6",
+            "geometry": [
+                {
+                    "x_m": 4,
+                    "y_m": 0,
+                    "z_m": 8
+                },
+                {
+                    "x_m": 8,
+                    "y_m": 0,
+                    "z_m": 8
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000006",
+            "end_node_id": "30000000-0000-4000-8000-000000000006",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000005",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S7 N6 to N7",
+            "geometry": [
+                {
+                    "x_m": 8,
+                    "y_m": 0,
+                    "z_m": 8
+                },
+                {
+                    "x_m": 8,
+                    "y_m": 0,
+                    "z_m": 4
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000007",
+            "end_node_id": "30000000-0000-4000-8000-000000000007",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000006",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S8 N3 to N7",
+            "geometry": [
+                {
+                    "x_m": 4,
+                    "y_m": 0,
+                    "z_m": 4
+                },
+                {
+                    "x_m": 8,
+                    "y_m": 0,
+                    "z_m": 4
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000008",
+            "end_node_id": "30000000-0000-4000-8000-000000000007",
+            "availability": "open",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000003",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        },
+        {
+            "label": "S9 N7 to N8",
+            "geometry": [
+                {
+                    "x_m": 8,
+                    "y_m": 0,
+                    "z_m": 4
+                },
+                {
+                    "x_m": 12,
+                    "y_m": 0,
+                    "z_m": 4
+                }
+            ],
+            "direction": "bidirectional",
+            "distance_m": 4,
+            "segment_id": "40000000-0000-4000-8000-000000000009",
+            "end_node_id": "30000000-0000-4000-8000-000000000008",
+            "availability": "closed",
+            "robot_access": "allowed",
+            "start_node_id": "30000000-0000-4000-8000-000000000007",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001",
+            "last_state_revision": 1
+        }
+    ],
+    "map_version": {
+        "site_id": "10000000-0000-4000-8000-000000000001",
+        "world_frame": {
+            "units": "meters",
+            "up_axis": "y",
+            "frame_id": "synthetic-m2-world-v1",
+            "handedness": "right",
+            "origin_description": "Invented entrance at (0,0,0); +X toward sample east corridor, +Z toward sample north corridor. Not geographic east/north."
+        },
+        "version_label": "SYNTHETIC-v1",
+        "map_version_id": "20000000-0000-4000-8000-000000000001",
+        "current_graph_revision": 1,
+        "current_path_state_revision": 1
+    },
+    "test_points": [
+        {
+            "label": "TP1 SYNTHETIC",
+            "purpose": "evaluation",
+            "is_synthetic": true,
+            "test_point_id": "60000000-0000-4000-8000-000000000001",
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "TP2 SYNTHETIC",
+            "purpose": "evaluation",
+            "is_synthetic": true,
+            "test_point_id": "60000000-0000-4000-8000-000000000002",
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "TP3 SYNTHETIC",
+            "purpose": "evaluation",
+            "is_synthetic": true,
+            "test_point_id": "60000000-0000-4000-8000-000000000003",
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "TP4 SYNTHETIC",
+            "purpose": "evaluation",
+            "is_synthetic": true,
+            "test_point_id": "60000000-0000-4000-8000-000000000004",
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "label": "TP5 SYNTHETIC",
+            "purpose": "evaluation",
+            "is_synthetic": true,
+            "test_point_id": "60000000-0000-4000-8000-000000000005",
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        }
+    ],
+    "destinations": [
+        {
+            "name": "East room",
+            "node_id": "30000000-0000-4000-8000-000000000008",
+            "site_id": "10000000-0000-4000-8000-000000000001",
+            "is_active": true,
+            "description": "Synthetic unreachable destination while S9 is closed.",
+            "destination_id": "50000000-0000-4000-8000-000000000003",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "name": "Lobby",
+            "node_id": "30000000-0000-4000-8000-000000000006",
+            "site_id": "10000000-0000-4000-8000-000000000001",
+            "is_active": true,
+            "description": "Synthetic destination.",
+            "destination_id": "50000000-0000-4000-8000-000000000002",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        },
+        {
+            "name": "Room 103",
+            "node_id": "30000000-0000-4000-8000-000000000003",
+            "site_id": "10000000-0000-4000-8000-000000000001",
+            "is_active": true,
+            "description": "Synthetic destination; human and robot routes differ.",
+            "destination_id": "50000000-0000-4000-8000-000000000001",
+            "graph_revision": 1,
+            "map_version_id": "20000000-0000-4000-8000-000000000001"
+        }
+    ]
+}
