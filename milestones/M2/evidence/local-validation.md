@@ -2,7 +2,7 @@
 
 Review dates: October 12-14, 2026. Branch: `feature/noah-m2-backend`, based on `origin/dev` at `2d1ea9d`. Supabase configuration, routing integration and later teammate additions were checked after the initial local checks.
 
-These results cover local backend work and a shared Supabase integration check. They are not a production demo sign-off or real VPS evidence. The reviewed M2 migration and synthetic seed were applied to shared Supabase on October 13, 2026. No branch was pushed, merged or deployed.
+These results cover local backend work and a shared Supabase integration check. They are not a production demo sign-off or real VPS evidence. The reviewed M2 migration and synthetic seed were applied to shared Supabase on October 13, 2026. `feature/noah-m2-backend` was pushed and [PR #34](https://github.com/ezerenm/SFSU-csc648-06-Fall26-team02/pull/34) opened against `dev` on October 14. GitHub generated an automatic Vercel preview; the PR was not merged and production was not deployed.
 
 ## Environment
 

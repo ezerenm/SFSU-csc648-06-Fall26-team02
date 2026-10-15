@@ -9,9 +9,9 @@ Owner: Noah Bran (Backend Lead). Scope authority: **SpatialOS M2 Team Plan v2**,
 | Seven-table schema, constraints, read policies, graph query | [Migration](../../app/backend/migrations/202610110001_m2_foundation.sql) | Applied to shared Supabase and checked in local PostgreSQL |
 | Tyler's labeled sample data | [Seed SQL](seed.sql), [seed guide](SEED_GUIDE.md) | Working synthetic fixture |
 | Shared types and integration contracts | [TypeScript](../../app/frontend/lib/spatial/contracts.ts), [contracts](CONTRACTS.md) | Ready for teammate review |
-| Graph retrieval API | `GET /api/graph` | Verified through local Next.js against shared Supabase; deployment pending |
-| Localization-attempt list/search API | `GET /api/localization-attempts` | Verified through local Next.js against shared Supabase; deployment pending |
-| Route API | `POST /api/route` | Sumit's Dijkstra function verified through local Next.js against shared Supabase; deployment pending |
+| Graph retrieval API | `GET /api/graph` | Verified through local Next.js against shared Supabase; PR preview generated, production verification pending |
+| Localization-attempt list/search API | `GET /api/localization-attempts` | Verified through local Next.js against shared Supabase; PR preview generated, production verification pending |
+| Route API | `POST /api/route` | Sumit's Dijkstra function verified through local Next.js against shared Supabase; PR preview generated, production verification pending |
 | M2 Section 4 | [Architecture, Database and APIs](SpatialOS_M2_Section4_Architecture_DB_APIs.md) | Draft for Daksh and Ezeren |
 | Verification and remaining demo work | [Local evidence](evidence/local-validation.md) | Local results only; no production sign-off |
 
