@@ -1,0 +1,6 @@
+{
+  "base_url": "https://YOUR-PRODUCTION-URL.vercel.app",
+  "device_token": "PASTE-DEVICE-TOKEN-HERE",
+  "map_version_id": "b2000000-0000-4000-8000-000000000001",
+  "device_id": "iphone-yourname"
+}
