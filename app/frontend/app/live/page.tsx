@@ -163,17 +163,17 @@ export default function LivePage() {
 
       <div className="mb-3 flex flex-wrap gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Go to</span>
-          <select className={select} value={destinationId} onChange={(e) => setDestinationId(e.target.value)}>
-            <option value="">Choose a destination</option>
-            {destinations.map((d) => <option key={d.destination_id} value={d.destination_id}>{d.name}</option>)}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">Start from</span>
           <select className={select} value={startChoice} onChange={(e) => setStartChoice(e.target.value)}>
             <option value={AUTO}>Nearest to my position</option>
             {nodes.map((n) => <option key={n.node_id} value={n.node_id}>{n.label}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">Go to</span>
+          <select className={select} value={destinationId} onChange={(e) => setDestinationId(e.target.value)}>
+            <option value="">Choose a destination</option>
+            {destinations.map((d) => <option key={d.destination_id} value={d.destination_id}>{d.name}</option>)}
           </select>
         </label>
       </div>
