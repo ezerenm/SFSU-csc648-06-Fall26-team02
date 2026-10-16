@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import {
   OUTCOMES,
   type AttemptSearchResponse,
@@ -55,22 +54,17 @@ export default function HomeExplorer() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:px-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">SpatialOS</h1>
+      <header id="explore" className="scroll-mt-6 space-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight">Browse the data</h2>
         <p className="max-w-2xl text-zinc-600 dark:text-zinc-400">
-          Test home page for the Milestone 2 vertical prototype. Everything below is read from the
+          Test page for the Milestone 2 vertical prototype. Everything below is read from the
           database through the app&apos;s API routes.
         </p>
-        <nav aria-label="Pages" className="flex flex-wrap gap-4 text-sm font-medium">
-          <Link className="underline underline-offset-2" href="/live">Live position</Link>
-          <Link className="underline underline-offset-2" href="/viewer">3D viewer and routes</Link>
-          <Link className="underline underline-offset-2" href="/about">About the team</Link>
-        </nav>
       </header>
 
       <section aria-labelledby="places" className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 id="places" className="text-xl font-semibold">Places and paths</h2>
+          <h3 id="places" className="text-xl font-semibold">Places and paths</h3>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Map</span>
             <select className={field} value={mapId} onChange={(e) => setMapId(e.target.value)}>
@@ -168,7 +162,7 @@ function AttemptSearch({ testPoints }: { testPoints: GraphResponse["test_points"
   return (
     <section aria-labelledby="attempts" className="space-y-4">
       <div>
-        <h2 id="attempts" className="text-xl font-semibold">Search localization attempts</h2>
+        <h3 id="attempts" className="text-xl font-semibold">Search localization attempts</h3>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Synthetic test records (invented for development; not real scan results).
         </p>
