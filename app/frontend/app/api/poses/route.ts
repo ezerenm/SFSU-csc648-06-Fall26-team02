@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ reason: "bad token" }, { status: 401 });
   }
 
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let body: any;
   try {
     body = await request.json();
