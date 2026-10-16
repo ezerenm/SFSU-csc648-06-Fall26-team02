@@ -151,7 +151,7 @@ export default function LivePage() {
   return (
     <main className="mx-auto max-w-3xl p-4">
       <h1 className="text-xl font-semibold">Live position (HSS 349)</h1>
-      <p className="mb-3 text-sm text-gray-600" aria-live="polite">
+      <p className="mb-3 text-sm text-gray-600 dark:text-gray-400" aria-live="polite">
         {error
           ? `Error: ${error}`
           : !pose
@@ -243,21 +243,21 @@ export default function LivePage() {
       )}
 
       <section className="mt-3 text-sm" aria-live="polite">
-        {!destination && <p className="text-gray-600">Choose a destination to see the shortest route.</p>}
-        {destination && !startId && <p className="text-gray-600">Waiting for a position to start from. You can also pick a start node.</p>}
-        {destination && startId && !routeResult && <p className="text-gray-600">Finding route…</p>}
-        {routeResult?.error && <p role="alert" className="text-red-600">Could not get a route: {routeResult.error}</p>}
-        {arrived && <p className="font-semibold text-green-700">You have arrived at {destination!.name}.</p>}
-        {route?.status === "unreachable" && <p className="text-red-600">No route from {nodeLabel(route.start_node_id)} to {destination!.name}.</p>}
+        {!destination && <p className="text-gray-600 dark:text-gray-400">Choose a destination to see the shortest route.</p>}
+        {destination && !startId && <p className="text-gray-600 dark:text-gray-400">Waiting for a position to start from. You can also pick a start node.</p>}
+        {destination && startId && !routeResult && <p className="text-gray-600 dark:text-gray-400">Finding route…</p>}
+        {routeResult?.error && <p role="alert" className="text-red-600 dark:text-red-400">Could not get a route: {routeResult.error}</p>}
+        {arrived && <p className="font-semibold text-green-700 dark:text-green-400">You have arrived at {destination!.name}.</p>}
+        {route?.status === "unreachable" && <p className="text-red-600 dark:text-red-400">No route from {nodeLabel(route.start_node_id)} to {destination!.name}.</p>}
         {route?.status === "valid" && !arrived && (
           route.steps.length === 0
-            ? <p className="text-gray-600">You are at {destination!.name}.</p>
+            ? <p className="text-gray-600 dark:text-gray-400">You are at {destination!.name}.</p>
             : (
               <>
                 <p className="font-medium">
                   {nodeLabel(route.start_node_id)} → {destination!.name} · {route.total_distance_m.toFixed(1)} m
                 </p>
-                <ol className="mt-1 list-decimal pl-5 text-gray-700">
+                <ol className="mt-1 list-decimal pl-5 text-gray-700 dark:text-gray-300">
                   {route.steps.map((s) => (
                     <li key={s.segment_id}>
                       {nodeLabel(s.from_node_id)} → {nodeLabel(s.to_node_id)} ({segLength(s.segment_id).toFixed(1)} m)
