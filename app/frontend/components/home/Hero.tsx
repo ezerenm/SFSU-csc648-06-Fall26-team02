@@ -120,8 +120,8 @@ export default function Hero() {
     <header className="border-b border-[#d5dee8] bg-[#f3f6f9] dark:border-[#1b2a40] dark:bg-[#0b1220]">
       <div className="mx-auto grid w-full max-w-5xl items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
         <div>
-          <p className="text-sm font-semibold text-[#1f5bff] dark:text-[#7aa2ff]">SpatialOS</p>
-          <h1 className="mt-3 max-w-xl text-4xl font-semibold leading-[1.1] tracking-tight text-[#101828] dark:text-[#e6edf6] sm:text-5xl">
+          <p className="text-3xl font-bold tracking-tight text-[#1f5bff] dark:text-[#a9c4ff] sm:text-4xl">SpatialOS</p>
+          <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-[1.1] tracking-tight text-[#101828] dark:text-[#e6edf6] sm:text-5xl">
             A phone, a room, and the shortest way across it.
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-8 text-[#44546a] dark:text-[#9fb0c6]">
@@ -147,8 +147,8 @@ export default function Hero() {
         <ol className="grid gap-6 border-t border-[#d5dee8] pt-8 dark:border-[#1b2a40] md:grid-cols-3">
           {steps.map((s) => (
             <li key={s.title}>
-              <h2 className="text-base font-semibold text-[#101828] dark:text-[#e6edf6]">{s.title}</h2>
-              <p className="mt-1.5 max-w-sm text-sm leading-6 text-[#44546a] dark:text-[#9fb0c6]">{s.body}</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-[#101828] dark:text-[#e6edf6]">{s.title}</h2>
+              <p className="mt-2 max-w-sm text-base leading-7 text-[#44546a] dark:text-[#9fb0c6]">{s.body}</p>
             </li>
           ))}
         </ol>
