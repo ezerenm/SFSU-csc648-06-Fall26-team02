@@ -29,7 +29,7 @@ World frame: right-handed, y up, meters; world z = -(Unity z). Node y = 0.
 | Back corner (far) to Front | 5.942 |
 | Front to Door | 5.116 |
 
-Destinations: Door, Back Corner (far), Front of Room. SQL: `app/backend/migrations/hss349_seed.sql`.
+Destinations (one per node): Door, Back Corner (Door Side), Back Corner (Far Side), Front of Room. SQL: `app/backend/migrations/hss349_seed.sql`.
 
 ## Known limits (not yet verified)
 

@@ -24,11 +24,11 @@ import { buildGraph } from './drawGraph';
 import { buildRoute } from './drawRoute';
 // makes the route tubes
 
-import type { Destination, GraphNode, PathSegment } from './temporaryGraph';
-// the data shape maps from temporaryGraph (what the hallways and destinations will look like)
+import type { Destination, GraphNode, PathSegment, RouteStep } from '@/lib/spatial/contracts';
+// the real API data types (what /api/graph and /api/route send back)
 
-import type { RouteStep } from './temporaryRoute';
-// the shape of one route step type
+export type ModelStatus = 'none' | 'loading' | 'ready' | 'error';
+// lets the control panel say if the scan is still loading or failed
 
 // ---------------------------------------------------------------------------
 
@@ -39,7 +39,14 @@ type SceneViewerProps = {
     
     modelUrl: string | null;
     // .glb
-    // if there is no model, a gray floor appears
+    // if there is no model, a grid floor appears
+
+    floorY: number;
+    // height of the scanned floor in the VPS frame (meters)
+    // the graph is drawn on this height
+
+    onModelStatus?: (status: ModelStatus) => void;
+    // tells the parent when the scan starts loading, finishes, or fails
 
     nodes: GraphNode[];
     // all the dots to be drawn
@@ -64,7 +71,7 @@ type SceneViewerProps = {
 // VIEWER --------------------------------------------------------------------
 
 
-export default function SceneViewer({ modelUrl, nodes, segments, destinations, routeSteps, routeColor }: SceneViewerProps) {
+export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor }: SceneViewerProps) {
     // The 3d viewer
     // React will run this 
 
@@ -78,6 +85,14 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
 
     const [sceneVersion, setSceneVersion] = useState(0);
     // increments each time a new scene is created
+
+    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+    const controlsRef = useRef<OrbitControls | null>(null);
+    // kept so the camera can be pointed at the graph once it loads
+
+    const statusRef = useRef(onModelStatus);
+    useEffect(() => { statusRef.current = onModelStatus; }, [onModelStatus]);
+    // newest callback without rebuilding the 3d world
 
     // ------------------------------------------------
 
@@ -109,8 +124,11 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
          
          const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
 
-         camera.position.set(14, 14, 12);
+         camera.position.set(6, 12, 10);
          // setting the view camera somewhere high and at a angle to the side
+         // the framing effect below moves it over the real graph
+
+         cameraRef.current = camera;
 
          // ---------------------------------------
 
@@ -119,6 +137,9 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
 
          const renderer = new THREE.WebGLRenderer({ antialias: true });
          // antialias provides smooth edges
+
+         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+         // sharp on phones / retina, capped so it stays fast
 
          renderer.setSize(container.clientWidth, container.clientHeight);
          // matching the div
@@ -148,9 +169,8 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
          const controls = new OrbitControls(camera, renderer.domElement);
          // lets the user scroll to zoom, spin the view. Moves the camera.
 
-         controls.target.set(2, 0, -1);
-         // the middle of the n1 to n5 graph
-         // the point the camera is going to spin around
+         controlsRef.current = controls;
+         // the framing effect below sets the point the camera spins around
          // ---------------------------------------
 
          // LIGHTS --------------------------------
@@ -165,36 +185,53 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
 
          // FLOOR ---------------------------------
 
+         let disposed = false;
+         // true once the viewer leaves the page, so a late scan isn't added
+
+         let model: THREE.Object3D | null = null;
+         // the loaded scan, kept so its memory can be freed
+
          if (modelUrl === null) {
-            // if no model file is found, make the floor plain
+            // if no model file is given, show a grid floor instead
 
-            const floor = new THREE.Mesh(new THREE.BoxGeometry(12, 0.1, 18), new THREE.MeshStandardMaterial({ color: 'gray'}));
-            // gray box
-            // 12 meters wide, 0.1 meters thick, 18 meters long
+            const grid = new THREE.GridHelper(40, 40, 'gray', '#333');
+            // 40 x 40 meters, 1 meter squares
 
-            floor.position.set(2, -0.05, -1);
-            // putting the floor under the graph
-            // y = 0
+            grid.position.y = floorY;
+            // on the floor height
 
-            scene.add(floor);
-            // adding the floor to the 3d world
+            scene.add(grid);
+            statusRef.current?.('none');
 
          } else {
-            // there is a model file found, so we load it
+            // there is a model file, so we load it
+
+            statusRef.current?.('loading');
 
             new GLTFLoader().load(
                 // loading the .glb file
 
                 modelUrl,
 
-                (gltf) => scene.add(gltf.scene),
-                // when it finishes loading in, the model will be added to the 3d world
-                // scan = world coordinates system
+                (gltf) => {
+                    // the scan is in the same VPS frame as the graph, so no moving or scaling
+
+                    if (disposed) { disposeObject(gltf.scene); return; }
+                    // viewer was closed while loading
+
+                    model = gltf.scene;
+                    scene.add(model);
+                    statusRef.current?.('ready');
+                },
 
                 undefined, 
                 
-                (error) => console.error('Model could not be loaded:', error)
-                // print error if loading fails
+                (error) => {
+                    console.error('Model could not be loaded:', error);
+                    // print error if loading fails
+
+                    if (!disposed) statusRef.current?.('error');
+                }
             );
          }
 
@@ -286,13 +323,20 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
             container.removeChild(labelRenderer.domElement);
             // takes nametags out of the box
 
+            disposed = true;
+
+            if (model !== null) disposeObject(model);
+            // frees the scan's meshes and textures from the GPU
+
             sceneRef.current = null;
+            cameraRef.current = null;
+            controlsRef.current = null;
             // clears all memory of the 3d world
 
          };
 
          // ---------------------------------------
-    }, [modelUrl]);
+    }, [modelUrl, floorY]);
 
     // DRAWING THE GRAPH --------------------------
 
@@ -305,7 +349,7 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
         if (scene === null) return;
         // if there is no 3d world, then stop
 
-        const graph = buildGraph(nodes, segments, destinations);
+        const graph = buildGraph(nodes, segments, destinations, floorY);
         // drawGraph.ts builds the spheres, lines, name tags
 
         scene.add(graph);
@@ -318,7 +362,10 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
             
             graph.traverse((child) => {
 
-                if (child instanceof THREE.Mesh || child instanceof THREE.Line) child.geometry.dispose();
+                if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+                    child.geometry.dispose();
+                    (child.material as THREE.Material).dispose();
+                }
                 // if its a sphere or line, free its memory
 
                 if ('element' in child && child.element instanceof HTMLElement) child.element.remove();
@@ -326,9 +373,48 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
             });
         };
 
-    }, [nodes, segments, destinations, sceneVersion]);
+    }, [nodes, segments, destinations, floorY, sceneVersion]);
     // run again when the dots, lines, or destinations update
     // run again when theres a new sceneVersion
+
+    // -----------------------------------------
+
+    // POINTING THE CAMERA AT THE GRAPH --------
+
+    useEffect(() => {
+        // runs when the graph loads
+
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+
+        if (camera === null || controls === null || nodes.length === 0) return;
+
+        const xs = nodes.map((node) => node.position.x_m);
+        const zs = nodes.map((node) => node.position.z_m);
+
+        const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+        const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
+        // middle of the graph
+
+        const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 4);
+        // how big the graph is (at least 4 m so tiny graphs aren't too close)
+
+        const halfV = THREE.MathUtils.degToRad(camera.fov / 2);
+        const halfH = Math.atan(Math.tan(halfV) * camera.aspect);
+        // the camera sees less side to side on a tall phone screen
+
+        const distance = (size * 0.75) / Math.tan(Math.min(halfV, halfH));
+        // far enough back that the whole graph (plus some room) fits on screen
+
+        const direction = new THREE.Vector3(0.25, 1, 0.7).normalize();
+        // high up and a little to the side, looking down at the room
+
+        controls.target.set(centerX, floorY, centerZ);
+        camera.position.set(centerX, floorY, centerZ).addScaledVector(direction, distance);
+
+        controls.update();
+
+    }, [nodes, floorY, sceneVersion]);
 
     // -----------------------------------------
 
@@ -344,7 +430,7 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
         if (scene === null || routeSteps.length === 0) return;
         // if there is no 3d wolrd or route picked, skip since theres nothing to draw
 
-        const route = buildRoute(routeSteps, segments, routeColor);
+        const route = buildRoute(routeSteps, segments, routeColor, floorY);
         // drawRoute.ts builds the tube for the route
 
         if (route === null) return;
@@ -359,11 +445,12 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
             scene.remove(route);
             // take the old tube out of the 3d world
 
-            route.geometry.dispose()
+            route.geometry.dispose();
+            (route.material as THREE.Material).dispose();
             // free the shape memory
 
         };
-    }, [routeSteps, segments, routeColor, sceneVersion]);
+    }, [routeSteps, segments, routeColor, floorY, sceneVersion]);
     // run again when the route, path, color, or world updates
 
     // -----------------------------------------
@@ -373,13 +460,22 @@ export default function SceneViewer({ modelUrl, nodes, segments, destinations, r
 
 }
 
+// HELPERS -------------------------------------------------------------------
 
+function disposeObject(root: THREE.Object3D) {
+    // frees the GPU memory of a loaded model (meshes, materials, textures)
 
+    root.traverse((child) => {
 
-         
+        if (!(child instanceof THREE.Mesh)) return;
 
-         
+        child.geometry.dispose();
 
+        const materials: THREE.Material[] = Array.isArray(child.material) ? child.material : [child.material];
 
-        
-
+        for (const material of materials) {
+            for (const value of Object.values(material)) if (value instanceof THREE.Texture) value.dispose();
+            material.dispose();
+        }
+    });
+}
