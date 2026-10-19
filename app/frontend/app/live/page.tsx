@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import type { GraphResponse, RouteRequest, RouteResponse } from "@/lib/spatial/contracts";
 import { ARRIVED_M, distance, pickStartNode, routePolyline } from "@/lib/spatial/liveRoute";
+import { formatMeters, placeNamer, placesFor } from "@/lib/spatial/places";
 
 // M2: map version is hardcoded. M3: look it up from the site's active_map_version_id.
 const MAP_VERSION_ID = "b2000000-0000-4000-8000-000000000001";
@@ -89,6 +90,9 @@ export default function LivePage() {
   const segments = useMemo(() => graph?.segments ?? [], [graph]);
   const destinations = useMemo(() => (graph?.destinations ?? []).filter((d) => d.is_active), [graph]);
   const byId = useMemo(() => new Map(nodes.map((n) => [n.node_id, n])), [nodes]);
+  // Same place names, order, and distance format as /viewer.
+  const places = useMemo(() => placesFor(nodes, destinations), [nodes, destinations]);
+  const destinationPlaces = places.filter((p) => p.destination_id !== null);
 
   // Auto start = node nearest the phone, with hysteresis. Derived during render (no effect needed).
   const wantedAuto = pose && nodes.length
@@ -142,7 +146,7 @@ export default function LivePage() {
   const destNode = destination ? byId.get(destination.node_id) ?? null : null;
   const arrived = live && !!pose && !!destNode &&
     distance(destNode.position, { x_m: pose.world_position.x_m, z_m: pose.world_position.z_m }) <= ARRIVED_M;
-  const nodeLabel = (id: string) => byId.get(id)?.label ?? id.slice(0, 8);
+  const nodeLabel = placeNamer(places);
   const segLength = (id: string) => segments.find((s) => s.segment_id === id)?.distance_m ?? 0;
 
   const sx = (x: number) => x - view!.minX;
@@ -150,30 +154,35 @@ export default function LivePage() {
 
   return (
     <main className="mx-auto max-w-3xl p-4">
-      <h1 className="text-xl font-semibold">Live position (HSS 349)</h1>
+      <h1 className="text-xl font-semibold">Live Navigation</h1>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {graph ? `${graph.site.name} · ${graph.map_version.version_label}` : "Loading map…"}
+      </p>
       <p className="mb-3 text-sm text-gray-600 dark:text-gray-400" aria-live="polite">
         {error
-          ? `Error: ${error}`
+          ? `Could not load live data: ${error}`
           : !pose
-          ? "Waiting for the phone to send a position..."
+          ? "Waiting for the phone to send a position…"
           : live
-          ? `Live, last update ${ageS!.toFixed(1)} s ago`
-          : `Not live: status ${pose.tracking_status}, last update ${ageS!.toFixed(0)} s ago`}
+          ? `Live · updated ${ageS!.toFixed(1)} s ago`
+          : pose.tracking_status !== "valid"
+          ? `Not live · tracking ${pose.tracking_status}, updated ${ageS!.toFixed(0)} s ago`
+          : `Not live · no update for ${ageS!.toFixed(0)} s`}
       </p>
 
       <div className="mb-3 flex flex-wrap gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Start from</span>
+          <span className="font-medium">Start</span>
           <select className={select} value={startChoice} onChange={(e) => setStartChoice(e.target.value)}>
-            <option value={AUTO}>Nearest to my position</option>
-            {nodes.map((n) => <option key={n.node_id} value={n.node_id}>{n.label}</option>)}
+            <option value={AUTO}>My current location (auto)</option>
+            {places.map((p) => <option key={p.node_id} value={p.node_id}>{p.name}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Go to</span>
+          <span className="font-medium">Destination</span>
           <select className={select} value={destinationId} onChange={(e) => setDestinationId(e.target.value)}>
-            <option value="">Choose a destination</option>
-            {destinations.map((d) => <option key={d.destination_id} value={d.destination_id}>{d.name}</option>)}
+            <option value="">Select a destination</option>
+            {destinationPlaces.map((p) => <option key={p.destination_id} value={p.destination_id!}>{p.name}</option>)}
           </select>
         </label>
       </div>
@@ -212,7 +221,7 @@ export default function LivePage() {
             <g key={n.node_id}>
               <circle cx={sx(n.position.x_m)} cy={sy(n.position.z_m)} r={0.2} fill="#374151" />
               <text x={sx(n.position.x_m) + 0.3} y={sy(n.position.z_m) - 0.3}
-                fontSize={0.4} fill="#374151">{n.label}</text>
+                fontSize={0.4} fill="#374151">{nodeLabel(n.node_id)}</text>
             </g>
           ))}
 
@@ -243,24 +252,25 @@ export default function LivePage() {
       )}
 
       <section className="mt-3 text-sm" aria-live="polite">
-        {!destination && <p className="text-gray-600 dark:text-gray-400">Choose a destination to see the shortest route.</p>}
-        {destination && !startId && <p className="text-gray-600 dark:text-gray-400">Waiting for a position to start from. You can also pick a start node.</p>}
+        {!destination && <p className="text-gray-600 dark:text-gray-400">Select a destination to see the shortest route.</p>}
+        {destination && !startId && <p className="text-gray-600 dark:text-gray-400">Waiting for the phone&apos;s position. You can also select a start manually.</p>}
         {destination && startId && !routeResult && <p className="text-gray-600 dark:text-gray-400">Finding route…</p>}
-        {routeResult?.error && <p role="alert" className="text-red-600 dark:text-red-400">Could not get a route: {routeResult.error}</p>}
+        {routeResult?.error && <p role="alert" className="text-red-600 dark:text-red-400">Could not calculate a route: {routeResult.error}</p>}
         {arrived && <p className="font-semibold text-green-700 dark:text-green-400">You have arrived at {destination!.name}.</p>}
-        {route?.status === "unreachable" && <p className="text-red-600 dark:text-red-400">No route from {nodeLabel(route.start_node_id)} to {destination!.name}.</p>}
+        {route?.status === "unreachable" && <p className="text-red-600 dark:text-red-400">No permitted route from {nodeLabel(route.start_node_id)} to {destination!.name}.</p>}
         {route?.status === "valid" && !arrived && (
           route.steps.length === 0
-            ? <p className="text-gray-600 dark:text-gray-400">You are at {destination!.name}.</p>
+            // Same start and destination node. Only the live phone check above may say "arrived".
+            ? <p className="text-gray-600 dark:text-gray-400">Start and destination are the same ({destination!.name}). No route needed.</p>
             : (
               <>
                 <p className="font-medium">
-                  {nodeLabel(route.start_node_id)} → {destination!.name} · {route.total_distance_m.toFixed(1)} m
+                  {nodeLabel(route.start_node_id)} → {destination!.name} · {formatMeters(route.total_distance_m)}
                 </p>
                 <ol className="mt-1 list-decimal pl-5 text-gray-700 dark:text-gray-300">
                   {route.steps.map((s) => (
                     <li key={s.segment_id}>
-                      {nodeLabel(s.from_node_id)} → {nodeLabel(s.to_node_id)} ({segLength(s.segment_id).toFixed(1)} m)
+                      {nodeLabel(s.from_node_id)} → {nodeLabel(s.to_node_id)} ({formatMeters(segLength(s.segment_id))})
                     </li>
                   ))}
                 </ol>
