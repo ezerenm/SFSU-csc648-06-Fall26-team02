@@ -22,6 +22,7 @@ type Pose = {
   tracking_status: string;
   captured_at: string;
   device_id: string;
+  data_origin: string;
 };
 type RouteState = { key: string; route: RouteResponse | null; error: string | null };
 
@@ -52,7 +53,7 @@ export default function LivePage() {
         if (!cancelled && (e as Error).name !== "AbortError") setError((e as Error).message);
       }
       const p = await supabase.from("pose_samples")
-        .select("sample_id,world_position,heading_deg,tracking_status,captured_at,device_id")
+        .select("sample_id,world_position,heading_deg,tracking_status,captured_at,device_id,data_origin")
         .eq("map_version_id", MAP_VERSION_ID)
         .order("captured_at", { ascending: false }).limit(1);
       if (cancelled) return;
@@ -164,7 +165,7 @@ export default function LivePage() {
           : !pose
           ? "Waiting for the phone to send a position…"
           : live
-          ? `Live · updated ${ageS!.toFixed(1)} s ago`
+          ? `Live · updated ${ageS!.toFixed(1)} s ago${pose.data_origin === "synthetic" ? " · test pose, not a real localization" : ""}`
           : pose.tracking_status !== "valid"
           ? `Not live · tracking ${pose.tracking_status}, updated ${ageS!.toFixed(0)} s ago`
           : `Not live · no update for ${ageS!.toFixed(0)} s`}
