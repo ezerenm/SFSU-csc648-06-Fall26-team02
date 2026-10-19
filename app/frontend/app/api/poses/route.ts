@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
+import { poseOrigin } from "@/lib/spatial/poseOrigin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
 
   const {
     sample_id, map_version_id, device_id, provider_map_id,
-    provider_pose, tracking_status, captured_at, attempt_id,
+    provider_pose, tracking_status, captured_at, attempt_id, data_origin,
   } = body ?? {};
 
   if (!UUID.test(sample_id ?? "")) return bad("sample_id must be a uuid");
@@ -93,7 +94,8 @@ export async function POST(request: Request) {
     world_position,
     heading_deg,
     tracking_status,
-    data_origin: "real",
+    // Fake-test poses (Send Fake Pose in Unity) must never be stored as real localizations.
+    data_origin: poseOrigin(device_id, data_origin),
     captured_at: when.toISOString(),
   });
 

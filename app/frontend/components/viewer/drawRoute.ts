@@ -1,15 +1,12 @@
-// Takes the route and turns it into one tube. Blue for human, orange for robot. 
+// Takes the route and turns it into one tube. Blue for human, orange for robot.
 
 // IMPORTS --------------------------------------------------------------------
 
 import * as THREE from 'three';
 // three js library
 
-import type { PathSegment } from './temporaryGraph';
-// segment type from temporary graph
-
-import type { RouteStep } from './temporaryRoute';
-// step type from temporary route
+import type { PathSegment, RouteStep } from '@/lib/spatial/contracts';
+// the real API data types
 
 import { toVector } from './drawGraph';
 // function to turn a position into a Three.js point
@@ -18,7 +15,7 @@ import { toVector } from './drawGraph';
 
 // BUILDING ROUTE TUBE --------------------------------------------------------
 
-export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: string): THREE.Mesh | null {
+export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: string, floorY = 0): THREE.Mesh | null {
     // turning the route steps into a big line like a tube
 
     const segmentById = new Map(segments.map((segment) => [segment.segment_id, segment]));
@@ -31,15 +28,15 @@ export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: s
 
     for (const step of steps) {
         // going through the route one step at a time
-        
+
         const segment = segmentById.get(step.segment_id);
         // the segment for this step
 
         if (segment === undefined) continue;
         // skip if the data isn't right
 
-        const stepPoints = segment.geometry.map((point) => toVector(point, 0.15));
-        // the points for this segment 
+        const stepPoints = segment.geometry.map((point) => toVector(point, 0.15, floorY));
+        // the points for this segment
 
         if (step.from_node_id === segment.end_node_id) stepPoints.reverse();
         // reverses the points if walking backwards
@@ -68,13 +65,19 @@ export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: s
     // if its false, don't go back to the start
     // 0 at the end so it bends like hallways do
 
-    const tube = new THREE.TubeGeometry(curve, points.length * 16, 0.12, 8, false);
-    // making a tube along the path by wrapping it. 
+    const tube = new THREE.TubeGeometry(curve, points.length * 16, 0.08, 8, false);
+    // making a tube along the path by wrapping it.
     // points.length * 16 = how many pieces the tube is constructed of, the more the smoother
     // 8 = how many sides around
     // false = making sure the tube doesn't close as a loop
 
-    return new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color }));
+    const mesh = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color, depthTest: false }));
+    // depthTest false = the route stays visible through desks in the scan
+
+    mesh.renderOrder = 10;
+    // drawn on top of the graph lines
+
+    return mesh;
 
     // ------------------------------------------------------------------------
 
