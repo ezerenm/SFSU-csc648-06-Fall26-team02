@@ -1,0 +1,35 @@
+digraph G {
+  rankdir=TB; nodesep=0.5; ranksep=0.55; newrank=true;
+  graph [fontname="Helvetica", fontsize=12, bgcolor=white];
+  node  [shape=box, style="rounded,filled", fillcolor="#EEF2F7", color="#1F3864", fontname="Helvetica", fontsize=11, margin="0.18,0.08"];
+  edge  [color="#444444", fontname="Helvetica", fontsize=9.5, arrowsize=0.7];
+
+  subgraph cluster_cap { label="Capture (once per map)"; style="rounded,dashed"; color="#8C8C8C"; fontcolor="#1F3864";
+    scan [label="Scaniverse scan\nof HSS 349"];
+    vps  [label="Niantic VPS map\nSFSU HSS 349 v2"];
+    glb  [label="GLB model\n(static file on Vercel)"];
+  }
+  subgraph cluster_cli { label="Clients"; style="rounded,dashed"; color="#8C8C8C"; fontcolor="#1F3864";
+    app   [label="iPhone app\nUnity + Niantic Spatial SDK"];
+    pages [label="Web app in browser\n/   /viewer   /live"];
+  }
+  subgraph cluster_api { label="Vercel: Next.js API routes (Node.js 22)"; style="rounded,dashed"; color="#8C8C8C"; fontcolor="#1F3864";
+    apis   [label="GET /api/graph\nGET /api/localization-attempts\nPOST /api/route\nPOST /api/poses", fillcolor="#DCE6F2"];
+    router [label="Dijkstra routing\nmodule (lib/routing)"];
+  }
+  db [label="Supabase PostgreSQL 17\n8 M2 tables, RLS", shape=cylinder, fillcolor="#E7E6E6", style=filled];
+  rt [label="Supabase Realtime", fillcolor="#E7E6E6"];
+
+  scan -> vps; scan -> glb;
+  {rank=same; app; pages;}
+  {rank=same; apis; router;}
+  {rank=same; db; rt;}
+  vps -> app [style=dashed, label=" localize"];
+  glb -> pages [label=" load model"];
+  app -> apis [label=" pose every 0.5 s\n (x-device-token)"];
+  pages -> apis [label=" fetch JSON:\n graph, search, route"];
+  apis -> router [label=" route request", dir=both, arrowtail=none];
+  apis -> db [label=" read; insert pose"];
+  db -> rt [label=" new pose_samples rows"];
+  rt -> pages [label=" push to /live", constraint=false, style=bold, color="#2E74B5", fontcolor="#2E74B5"];
+}
