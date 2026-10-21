@@ -3,7 +3,7 @@
 **Author:** Noah Bran, Backend Lead. **Reviewers:** Daksh Kumar, Ezeren Masangcay.
 **Revision (Oct 20):** updated by Sumit Kumar to match the deployed code on `main` (89ad6c8) and Sections 1, 2 and 5.
 
-**Status:** Built and deployed. The M2 schema, seed data and all four APIs run on production (`sfsu-csc648-06-fall26-team02.vercel.app`). Phone → production live position was verified in HSS 349 on Oct 20 (828 real poses stored in 8 sessions).
+**Status:** Built and deployed. The M2 schema, seed data and all four APIs run on production (`sfsu-csc648-06-fall26-team02.vercel.app`). Phone → production live position was verified in HSS 349 on Oct 20 (828 pose samples stored across 8 upload periods).
 
 ## 4.1 System architecture
 
@@ -22,7 +22,7 @@ SpatialOS has two clients that only talk to each other through our backend: the 
 | Database | Supabase PostgreSQL 17 with row-level security | All structured data; Realtime publication on `pose_samples` |
 | 3D model | Static GLB, `public/models/hss349-v2.glb` (4.9 MB) | Served by Vercel. Moves to Supabase Storage with the `visual_assets` table in M3 (Sections 1.12 and 5) |
 
-**Spatial frame (no transform in M2).** The HSS 349 world frame is the VPS map frame of *SFSU HSS 349 v2*. The GLB is exported from the same map, and the graph nodes were recorded with the iPhone while localized on it, so model, graph and poses already share one frame. The only conversion is handedness: Unity is left-handed, our world frame is right-handed and Y-up, so `/api/poses` stores `world = (x, y, −z)`. The viewer draws the graph at the floor height measured in the scan (−1.29 m). A `frame_transforms` table is needed only for maps whose model and VPS frame differ; it is designed in Section 1.12 and planned for M3.
+**Spatial frame (no transform in M2).** The HSS 349 world frame is the VPS map frame of *SFSU HSS 349 v2*. The GLB is exported from the same map, and the graph nodes were recorded with the iPhone while localized on it, so model, graph and poses already share one frame. The only conversion is handedness: Unity is left-handed, our world frame is right-handed and Y-up, so `/api/poses` stores `world = (x, y, −z)`. The viewer draws the graph at the floor height measured in the scan (−1.29 m). This conversion is implemented, but physical alignment is not yet validated: the walking direction (Door → Front) and position accuracy have not been checked against tape-measured reference points (planned M3, with the test points in R14). A `frame_transforms` table is needed only for maps whose model and VPS frame differ; it is designed in Section 1.12 and planned for M3.
 
 **Not built in M2** (designed, planned M3–M4): sign-in and roles, closures and rerouting, robot simulation, localization health and dashboard, Gemini summary, operator map editing.
 
@@ -107,6 +107,6 @@ No keys or tokens are in the repository: Supabase keys and `DEVICE_TOKEN` live i
 
 ## 4.7 Validation and remaining work
 
-**Verified.** Typecheck, lint and 74 tests passed before the final M2 merges (PR #43 → `dev`, PR #44 → `main`, Oct 19). SQL tests cover cross-map/revision constraints, geometry, timing and anon access; API tests cover filters, paging, validation, empty results, error sanitization and routing (human, robot, unreachable, zero-distance). On production (Oct 19) `/viewer` loads the HSS 349 scan with 4 destinations and returns Door → Front of Room = 5.1 m. Phone → production (Oct 20): 828 real poses reached production in 8 sessions, 4 before class (12:33–12:59) and 4 during the in-class demo (14:03–14:40); the live dot updated on `/live` on other phones and browsers. Session table, query and screenshot: `evidence/live-position.md`. Evidence: `milestones/M2/evidence/`.
+**Verified.** Typecheck, lint and 74 tests passed before the final M2 merges (PR #43 → `dev`, PR #44 → `main`, Oct 19). SQL tests cover cross-map/revision constraints, geometry, timing and anon access; API tests cover filters, paging, validation, empty results, error sanitization and routing (human, robot, unreachable, zero-distance). On production (Oct 19) `/viewer` loads the HSS 349 scan with 4 destinations and returns Door → Front of Room = 5.1 m. Phone → production (Oct 20): 828 pose samples reached production across 8 upload periods separated by gaps of more than 60 s, 4 before class (12:33–12:59) and 4 during the in-class demo (14:03–14:40); the live dot updated on `/live` on other phones and browsers. Upload-period table, query and screenshot: `evidence/live-position.md`. Evidence: `milestones/M2/evidence/`.
 
 **Remaining (M3).** Limit pose reads to public demo maps; enforce R6.4 (no live start from a stale or lost pose); fix HSS 349 map metadata (still v1 seed values); move `/api/poses` to `sfo1` if the dot lags; use `active_map_version_id` instead of hardcoded map IDs; re-measure nodes.

@@ -7,7 +7,7 @@ This section expands the M1 data definitions into full field-level definitions. 
 | Convention | Definition |
 |---|---|
 | Naming | `snake_case` in SQL and API JSON. Table names are plural (`graph_nodes`); entity names in the UML are singular (GraphNode). |
-| Terms | A **path segment** is a walkable connection between two **graph nodes**. The requirements list (Section 2) calls a path segment an *edge*. |
+| Terms | A **path segment** is a walkable connection between two **graph nodes**. Section 2 uses the same term; the M1 requirements called it an *edge*. |
 | IDs | UUID. Every reference points to an existing record. |
 | Time | `timestamptz` (UTC), ISO 8601 in the API. Displayed in local time. |
 | Units | Positions and distances in meters, latency in milliseconds, heading in degrees. Distances are stored to the millimeter and shown with one decimal (5.1 m). |
@@ -445,11 +445,11 @@ Gemini receives only aggregate metrics and attempt IDs, never camera data. All n
 |---|---|---|
 | Users, roles and privileges | 1.2 | R1.1–R1.4, R7.1–R7.3, R8.1–R8.2 |
 | Site and map version | 1.3–1.4 | R2.1, R2.2 |
-| Navigation graph | 1.5–1.6 | R2.3, R5.2, R5.4, R7.1, R7.2, R8.1–R8.3, R17.1, R17.2 |
-| Destination | 1.7 | R2.4, R5.1, R7.3 |
+| Navigation graph | 1.5–1.6 | R2.3, R5.2, R5.4, R7.1, R7.2, R8.1–R8.3, R15.3, R17.1, R17.2 |
+| Destination | 1.7 | R2.4, R5.1, R7.3, R15.3 |
 | Test point and reference | 1.8 | R12.1, R14.3 |
 | Localization attempt | 1.9 | R3.4, R12.1, R12.2, R14.1–R14.4, R15.1 |
-| Pose sample and session | 1.10 | R3.2, R3.3, R4.1, R4.2, R6.2–R6.4, R11.1, R11.2 |
+| Pose sample and session | 1.10 | R3.2, R3.3, R3.5, R4.1, R4.2, R6.2–R6.5, R11.1, R11.2 |
 | Route and simulated agent | 1.11 | R5.1–R5.5, R6.1, R9.1–R9.3, R10.1–R10.5 |
 | Visual asset and transform | 1.12 | R2.2, R3.3 |
 | Path event, obstacle and report | 1.13 | R8.1–R8.3, R17.2, R18.1–R18.6 |
