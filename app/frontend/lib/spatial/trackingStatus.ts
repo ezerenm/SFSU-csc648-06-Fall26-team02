@@ -1,11 +1,19 @@
 // turning the phones latest message into a status 
 
+// The Data -------------------------------------------------------------------
+
 export type TrackingColor = "green" | "gray" | "red" | "yellow";
 
 export type LatestPhoneMessage = { tracking_status: string; captured_at: string; };
 
+// The Data end ---------------------------------------------------------------
+
+// time setting
+
 export const SECONDS_BEFORE_GRAY_STATUS = 5;
 // if there is no message for 5 seconds, the app is either closed by the user or interrupted or offline
+
+// Getting the colors ---------------------------------------------------------
 
 export function getTrackingColor(latestMessage: LatestPhoneMessage | null, currentMs: number): TrackingColor {
 
@@ -43,6 +51,10 @@ export function getTrackingColor(latestMessage: LatestPhoneMessage | null, curre
     }
 }
 
+// Getting the colors end -----------------------------------------------------
+
+// GEtting the labels ---------------------------------------------------------
+
 export function getTrackingLabel(trackingColor: TrackingColor): string {
 
     if (trackingColor === "green") {
@@ -64,9 +76,15 @@ export function getTrackingLabel(trackingColor: TrackingColor): string {
     }
 }
 
+// Getting the labels end -----------------------------------------------------
+
+// route
+
 export function canStartFromLivePosition(trackingColor: TrackingColor): boolean {
 
     return trackingColor === "green";
+    
+    // we can only start a route if the chip is green 
 
 }
 
