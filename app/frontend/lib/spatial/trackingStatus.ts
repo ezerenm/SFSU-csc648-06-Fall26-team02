@@ -4,7 +4,7 @@
 
 export type TrackingColor = "green" | "gray" | "red" | "yellow";
 
-export type LatestPhoneMessage = { tracking_status: string; captured_at: string; };
+export type LatestPhoneMessage = { tracking_status: string; received_at: string; };
 
 // The Data end ---------------------------------------------------------------
 
@@ -23,9 +23,16 @@ export function getTrackingColor(latestMessage: LatestPhoneMessage | null, curre
 
     }
 
-    const capturedAtMs = new Date(latestMessage.captured_at).getTime();
+    const receivedAtMs = new Date(latestMessage.received_at).getTime();
 
-    const ageInSeconds = (currentMs - capturedAtMs) / 1000;
+    const ageInSeconds = (currentMs - receivedAtMs) / 1000;
+
+    if (Number.isNaN(ageInSeconds)) {
+        // time could not be read
+
+        return "gray";
+
+    }
 
     if (ageInSeconds >= SECONDS_BEFORE_GRAY_STATUS) {
 
@@ -59,7 +66,7 @@ export function getTrackingLabel(trackingColor: TrackingColor): string {
 
     if (trackingColor === "green") {
 
-        return "Accurate";
+        return "Live";
 
     } else if (trackingColor === "yellow") {
 
@@ -71,7 +78,7 @@ export function getTrackingLabel(trackingColor: TrackingColor): string {
 
     } else {
 
-        return "There is no data"
+        return "No data"
 
     }
 }
@@ -83,7 +90,7 @@ export function getTrackingLabel(trackingColor: TrackingColor): string {
 export function canStartFromLivePosition(trackingColor: TrackingColor): boolean {
 
     return trackingColor === "green";
-    
+
     // we can only start a route if the chip is green 
 
 }
