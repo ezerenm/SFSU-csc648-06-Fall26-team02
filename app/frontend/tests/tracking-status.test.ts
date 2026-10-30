@@ -10,7 +10,7 @@ const currentMs = Date.parse("2026-10-28T12:00:10Z");
 
 const messageSecondsAgo = (secondsAgo: number, trackingStatus: string) => ({
 
-    tracking_status: trackingStatus, captured_at: new Date(currentMs - secondsAgo * 1000).toISOString(),
+    tracking_status: trackingStatus, received_at: new Date(currentMs - secondsAgo * 1000).toISOString(),
 
 });
 
@@ -34,13 +34,15 @@ test("no message, previous message, or unknown status = gray", () => {
 
     assert.equal(getTrackingColor(messageSecondsAgo(1, "something_new"), currentMs), "gray");
 
+    assert.equal(getTrackingColor({ tracking_status: "valid", received_at: "not a real date" }, currentMs), "gray");
+
 })
 
 test("R6.4 labels + live start", () => {
 
-    assert.equal(getTrackingLabel("green"), "Accurate");
+    assert.equal(getTrackingLabel("green"), "Live");
 
-    assert.equal(getTrackingLabel("gray"), "There is no data");
+    assert.equal(getTrackingLabel("gray"), "No data");
 
     assert.equal(canStartFromLivePosition("green"), true);
 
