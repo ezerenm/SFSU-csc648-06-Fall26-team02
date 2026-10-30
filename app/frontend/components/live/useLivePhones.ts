@@ -28,6 +28,12 @@ export const POLL_AFTER_QUIET_MS = 2000;
 // if Realtime is quiet for 2 seconds, we read the database
 // this should stop map freeze in demo
 
+export const SLOW_POLL_AFTER_MS = 10000;
+// if nothing new comes in for 10 seconds, the phone is most likely off
+
+export const SLOW_POLL_EVERY_MS = 5000;
+// we check the database every 5 seconds
+
 const CLOCK_TICK_MS = 500;
 // how often we update "now"
 // chip status timing
@@ -52,6 +58,13 @@ export function useLivePhones(mapVersionId: string) {
     const lastHeardMs = useRef(0);
     // the last we heard from Realtime or the databse
 
+    const lastNewMessageMs = useRef(0);
+    // when we last saw a new message
+    // either realtime or databse
+
+    const newestReceivedMs = useRef(0);
+    // the newest received_at so far
+
     useEffect(() => {
         // runs when the page opens
 
@@ -64,6 +77,23 @@ export function useLivePhones(mapVersionId: string) {
 
         const addMessages = (messages: PhoneMessage[]) => {
             // adds messages list into phones
+
+            for (const message of messages) {
+                // checking if theres anything new
+
+                const receivedMs = new Date(message.received_at).getTime();
+                // when the server got this message
+
+                if (receivedMs > newestReceivedMs.current) {
+                    // if its newer than everything
+
+                    newestReceivedMs.current = receivedMs;
+                    // save it
+
+                    lastNewMessageMs.current = Date.now();
+                    // something new 
+                }
+            }
 
             setPhones((oldPhones) => {
                 // react gives us current phones
@@ -141,7 +171,13 @@ export function useLivePhones(mapVersionId: string) {
             setLiveError(null);
             // clear old errors 
 
-            addMessages([...(newestPositions.data as PhoneMessage[]), ...(newestMessages.data as PhoneMessage[])]);
+            const positionRows = newestPositions.data as PhoneMessage[];
+            // newest first
+
+            const messageRows = newestMessages.data as PhoneMessage[];
+            // newest first
+
+            addMessages([...positionRows.reverse(), ...messageRows.reverse()]);
             // adding both lists
             // addPhoneMessage classifies which ones are newest
 
@@ -175,7 +211,17 @@ export function useLivePhones(mapVersionId: string) {
             setNowMs(nowMs);
             // update so the clock so the status chips turn gray after five seconds
 
-            if (nowMs - lastHeardMs.current >= POLL_AFTER_QUIET_MS) {
+            let waitMs = POLL_AFTER_QUIET_MS;
+            // check after 2 seconds of quiet
+
+            if (nowMs - lastNewMessageMs.current >= SLOW_POLL_AFTER_MS) {
+                // nothing new for 10 seconds
+
+                waitMs = SLOW_POLL_EVERY_MS;
+
+            }
+
+            if (nowMs - lastHeardMs.current >= waitMs) {
                 // realtime has been quiet for two seconds
 
                 loadFromDatabase();

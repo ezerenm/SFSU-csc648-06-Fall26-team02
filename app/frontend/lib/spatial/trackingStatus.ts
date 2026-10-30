@@ -95,3 +95,41 @@ export function canStartFromLivePosition(trackingColor: TrackingColor): boolean 
 
 }
 
+// R3.4 Timed out -------------------------------------------------------------
+
+export const SECONDS_BEFORE_TIMED_OUT = 30;
+// if the iphone has been localizing for 30 seconds, time out
+
+export type ChipLook = { trackingColor: TrackingColor; label: string };
+// what the chip should look like
+// the color and words
+
+export function getChipLook(latestMessage: LatestPhoneMessage | null, localizingSince: string | null, currentMs: number): ChipLook {
+
+    const trackingColor = getTrackingColor(latestMessage, currentMs);
+    // either green, yellow, red, or gray
+
+    if (trackingColor === "yellow" && localizingSince !== null) {
+        // the phone is still finding its position
+
+        const localizingSinceMs = new Date(localizingSince).getTime();
+        // when it started localizing
+
+        const secondsLocalizing = (currentMs - localizingSinceMs) / 1000;
+        // how long its been localizing
+
+        if (!Number.isNaN(secondsLocalizing) && secondsLocalizing >= SECONDS_BEFORE_TIMED_OUT) {
+            // 30 seconds or more
+
+            return { trackingColor: "red", label: "Timed out, try again" };
+
+        }
+    }
+
+    return { trackingColor: trackingColor, label: getTrackingLabel(trackingColor) };
+    // otherwise the normal chip
+}
+
+// R3.4 Timed out end ---------------------------------------------------------
+
+
