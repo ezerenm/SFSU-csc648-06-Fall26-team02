@@ -16,9 +16,21 @@ import { addPhoneMessage, listPhones, pickNavigationPhone, type PhoneMessage, ty
 
 const makeMessage = (deviceId: string, secondsAfterNoon: number, trackingStatus: string, hasPosition: boolean): PhoneMessage => ({ 
 
-    sample_id: deviceId + "-" + secondsAfterNoon, device_id: deviceId, world_position: hasPosition ? { x_m: secondsAfterNoon,
-        y_m: 0, z_m: 0 } : null, heading_deg: null, tracking_status: trackingStatus, captured_at: new Date(Date.parse("2026-10-29T12:00:00Z") + secondsAfterNoon * 1000).toISOString(),
-        data_origin: "synthetic",
+    sample_id: deviceId + "-" + secondsAfterNoon,
+
+    device_id: deviceId,
+
+    world_position: hasPosition ? { x_m: secondsAfterNoon, y_m: 0, z_m: 0 } : null,
+
+    heading_deg: null,
+
+    tracking_status: trackingStatus,
+
+    captured_at: new Date(Date.parse("2026-10-30T12:00:00Z") + secondsAfterNoon * 1000).toISOString(),
+
+    received_at: new Date(Date.parse("2026-10-30T12:00:00Z") + secondsAfterNoon * 1000).toISOString(),
+
+    data_origin: "synthetic",
 
 });
 // creates a fake message from a phone and secondsAfterNoon measurs how new the message is
@@ -104,6 +116,26 @@ test("pickNavigationPhone prefers the visitor phone, otherwise it picks the newe
 
     assert.equal(listPhones(phones).length, 3);
     // all three phones are in the list
+
+})
+
+test("pickNavigationPhone never picks the robot phone", () => {
+
+    const robotId = KNOWN_DEVICES[1].deviceId;
+    // the robot phone id 
+    // hardcoded
+
+    assert.equal(getDeviceType(robotId), "robot");
+
+    let phones: PhonesByDevice = {};
+
+    phones = addPhoneMessage(phones, makeMessage(robotId, 5, "valid", true));
+
+    assert.equal(pickNavigationPhone(phones), null);
+
+    phones = addPhoneMessage(phones, makeMessage("phone-a", 1, "valid", true));
+
+    assert.equal(pickNavigationPhone(phones)?.deviceId, "phone-a");
 
 })
 

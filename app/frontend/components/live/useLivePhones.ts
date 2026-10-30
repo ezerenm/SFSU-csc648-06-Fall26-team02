@@ -21,7 +21,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 // the public connection
 // same as /live for M2
 
-const PHONE_COLUMNS = "sample_id,device_id,world_position,heading_deg,tracking_status,captured_at,data_origin";
+const PHONE_COLUMNS = "sample_id,device_id,world_position,heading_deg,tracking_status,captured_at,received_at,data_origin";
 // the columns from pose_samples
 
 export const POLL_AFTER_QUIET_MS = 2000;

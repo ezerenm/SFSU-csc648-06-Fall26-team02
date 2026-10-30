@@ -32,6 +32,9 @@ export type PhoneMessage = {
     captured_at: string;
     // when the phone sent this message
 
+    received_at: string;
+    // when our server received it
+
     data_origin: string;
     // real data or test data
 
@@ -177,28 +180,38 @@ export function pickNavigationPhone(phones: PhonesByDevice): PhoneState | null {
     let newestVisitor: PhoneState | null = null;
     // newest visitor phone so far
 
-    let newestAnyPhone: PhoneState | null = null;
-    // newest phone ever so far
+    let newestUnknownPhone: PhoneState | null = null;
+    // newest unknown phone ever so far
 
     for (const phone of listPhones(phones)) {
         // checking each phone
 
-        if (newestAnyPhone === null || isNewerMessage(phone.latestMessage, newestAnyPhone.latestMessage)) {
-            // this current phone is newer than our best so far
+        const deviceType = getDeviceType(phone.deviceId);
+        // either visitor, robot, or unknown
 
-            newestAnyPhone = phone;
-            // saving the phone
+        if (deviceType === "robot") {
+
+            continue;
+            // skip
 
         }
 
-        if (getDeviceType(phone.deviceId) === "visitor") {
-            // the phone is a visitor
+        if (deviceType === "visitor") {
 
             if (newestVisitor === null || isNewerMessage(phone.latestMessage, newestVisitor.latestMessage)) {
-                // this current visitor phone is our newest best visitor so far
 
                 newestVisitor = phone;
                 // saving the visitor phone
+
+            }
+
+        } else {
+
+            if (newestUnknownPhone === null || isNewerMessage(phone.latestMessage, newestUnknownPhone.latestMessage)) {
+
+                newestUnknownPhone = phone;
+                // saving the unknown phone
+
             }
         }
     }
@@ -206,12 +219,11 @@ export function pickNavigationPhone(phones: PhonesByDevice): PhoneState | null {
     if (newestVisitor !== null) {
 
         return newestVisitor;
-        // the visit should always win
+        // visitor wins
 
     }
 
-    return newestAnyPhone;
-    // otherwise use the newest phone possible
+    return newestUnknownPhone;
 
 }
 

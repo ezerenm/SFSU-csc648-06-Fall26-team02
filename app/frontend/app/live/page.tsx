@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GraphResponse, RouteRequest, RouteResponse } from "@/lib/spatial/contracts";
 // the api data shapes
 
-import { ARRIVED_M, distance, routePolyline, type Xz } from "@/lib/spatial/liveRoute";
+import { ARRIVED_M, distance, pickStartNode, routePolyline, type Xz } from "@/lib/spatial/liveRoute";
 // arrival distance, the meters between points, and turning a route into a line
 
 import { formatMeters, placeNamer, placesFor } from "@/lib/spatial/places";
@@ -17,7 +17,7 @@ import { formatMeters, placeNamer, placesFor } from "@/lib/spatial/places";
 import { canStartFromLivePosition, getTrackingColor, getTrackingLabel } from "@/lib/spatial/trackingStatus";
 // R4.1 status chip color and R6.4 live start rule
 
-import { checkLiveStart, findNearestSegment, startNodeForAttachment, type SegmentAttachment } from "@/lib/spatial/segmentAttach";
+import { checkLiveStart, findNearestSegment, type SegmentAttachment } from "@/lib/spatial/segmentAttach";
 // R6.2.2 snap to the nearest path and R6.3 checking if its too far
 
 import { listPhones, pickNavigationPhone } from "@/lib/spatial/livePhones";
@@ -177,7 +177,7 @@ export default function LivePage() {
 
   if (navigationPhone !== null) {
 
-    ageInSeconds = (nowMs - new Date(navigationPhone.latestMessage.captured_at).getTime()) / 1000;
+    ageInSeconds = (nowMs - new Date(navigationPhone.latestMessage.received_at).getTime()) / 1000;
     // subtract when it was sent in seconds
 
   }
@@ -206,25 +206,17 @@ export default function LivePage() {
     // the start node we want
 
     if (liveStartProblem === null && attachment !== null) {
-      // close enough
 
       const segment = attachment.segment;
       // the path snapped onto
 
-      if (autoStartId === segment.start_node_id || autoStartId === segment.end_node_id) {
-        // the node we use is one end of this path
+      const segmentEnds = nodes.filter((node) => node.node_id === segment.start_node_id || node.node_id === segment.end_node_id);
+      // the two nodes at the end of this path
 
-        wantedStartId = autoStartId;
-        // keeping it so the route doesnt go back and forth
+      const startNode = pickStartNode(segmentEnds, attachment.attachPoint, autoStartId);
 
-      } else {
+      wantedStartId = startNode === null ? null : startNode.node_id;
 
-        const startNode = startNodeForAttachment(attachment, nodes);
-        // otherwise use the closer end of the path
-
-        wantedStartId = startNode === null ? null : startNode.node_id;
-
-      }
     }
 
     if (wantedStartId !== autoStartId) {

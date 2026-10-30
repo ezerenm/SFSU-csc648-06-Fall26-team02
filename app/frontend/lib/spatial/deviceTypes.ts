@@ -8,10 +8,9 @@ export type DeviceType = "visitor" | "robot" | "unknown";
 export const KNOWN_DEVICES = [
     // hardcode which phone is which for m3
 
-    { deviceId: "PUT-VISITOR-PHONE-ID-HERE", deviceType: "visitor" },
-    // swap when real available
+    { deviceId: "iphone-sumit", deviceType: "visitor" },
 
-    { deviceId: "PUT-ROBOT-PHONE-ID-HERE", deviceType: "robot" },
+    { deviceId: "iphone-daksh", deviceType: "robot" },
 
 ];
 
