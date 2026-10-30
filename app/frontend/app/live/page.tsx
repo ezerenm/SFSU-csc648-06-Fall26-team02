@@ -1,284 +1,562 @@
 "use client";
 
+// IMPORTS --------------------------------------------------------------------
+
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+// react memory and sice tasks
+
 import type { GraphResponse, RouteRequest, RouteResponse } from "@/lib/spatial/contracts";
-import { ARRIVED_M, distance, pickStartNode, routePolyline } from "@/lib/spatial/liveRoute";
+// the api data shapes
+
+import { ARRIVED_M, distance, routePolyline, type Xz } from "@/lib/spatial/liveRoute";
+// arrival distance, the meters between points, and turning a route into a line
+
 import { formatMeters, placeNamer, placesFor } from "@/lib/spatial/places";
+// place names and formatting
 
-// M2: map version is hardcoded. M3: look it up from the site's active_map_version_id.
+import { canStartFromLivePosition, getTrackingColor, getTrackingLabel } from "@/lib/spatial/trackingStatus";
+// R4.1 status chip color and R6.4 live start rule
+
+import { checkLiveStart, findNearestSegment, startNodeForAttachment, type SegmentAttachment } from "@/lib/spatial/segmentAttach";
+// R6.2.2 snap to the nearest path and R6.3 checking if its too far
+
+import { listPhones, pickNavigationPhone } from "@/lib/spatial/livePhones";
+// every phone and which one /live navigate with
+
+import { getDeviceName, getDeviceType } from "@/lib/spatial/deviceTypes";
+// R19 either visitor or robot proxy
+
+import { useLivePhones } from "@/components/live/useLivePhones";
+// Realtime and smoothing out lag
+
+import LiveMap from "@/components/live/LiveMap";
+// the 2d map
+
+import TrackingChip from "@/components/live/TrackingChip";
+// the status chip
+
+import RoutePlanner from "@/components/viewer/RoutePlanner";
+// the existing 3d viewer with its route, used for the 3d tab
+
+// IMPORTS end ----------------------------------------------------------------
+
+// SETTINGS -------------------------------------------------------------------
+
 const MAP_VERSION_ID = "b2000000-0000-4000-8000-000000000001";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-type Pos = { x_m: number; y_m: number; z_m: number };
-type Pose = {
-  sample_id: string;
-  world_position: Pos;
-  heading_deg: number | null;
-  tracking_status: string;
-  captured_at: string;
-  device_id: string;
-  data_origin: string;
-};
-type RouteState = { key: string; route: RouteResponse | null; error: string | null };
+// HSS 349 map version
+// hardcoded
 
 const AUTO = "auto";
-const select = "rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900";
+// My Current Location option on the start list
+
+const selectClasses = "rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white";
+// the style for the two dropdowns
+// same white as /viewer
+
+type RouteState = { key: string; route: RouteResponse | null; error: string | null };
+// the last routw and which destination it was for
+
+type ViewMode = "2d" | "3d";
+// which tab is on
+
+// SETTINGS end ---------------------------------------------------------------
 
 export default function LivePage() {
+  // the /live page
+
+  // Memory ---------------------------
+
   const [graph, setGraph] = useState<GraphResponse | null>(null);
-  const [pose, setPose] = useState<Pose | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  const [error, setError] = useState<string | null>(null);
+  // the map from /api/graph
+  // null while loading
+
+  const [graphError, setGraphError] = useState<string | null>(null);
+  // error if the map did not load
+
+  const [viewMode, setViewMode] = useState<ViewMode>("2d");
+  // 2d live map or 3d viewer
+
   const [destinationId, setDestinationId] = useState("");
+  // the destination the user picked
+
   const [startChoice, setStartChoice] = useState(AUTO);
+  // "auto" is the live position
+  // its a node_id otherwise
+
   const [autoStartId, setAutoStartId] = useState<string | null>(null);
+  // the node we start from when we use live position
+
   const [routeState, setRouteState] = useState<RouteState | null>(null);
+  // the last route we received
+
+  const { phones, nowMs, liveError } = useLivePhones(MAP_VERSION_ID);
+  // each phones newest message
+  // the clock
+
+  // Memory end -----------------------
+
+  // Loading the graph ----------------
 
   useEffect(() => {
-    let cancelled = false;
-    const ctl = new AbortController();
+    // runs when the page opens
 
-    (async () => {
-      try {
-        const res = await fetch(`/api/graph?map_version_id=${MAP_VERSION_ID}`, { signal: ctl.signal, cache: "no-store" });
-        const body = await res.json();
-        if (!res.ok) throw new Error(body?.error?.message ?? `Graph request failed (${res.status})`);
-        if (!cancelled) setGraph(body as GraphResponse);
-      } catch (e) {
-        if (!cancelled && (e as Error).name !== "AbortError") setError((e as Error).message);
+    const controller = new AbortController();
+    // allows us to cancel the request if the page closes
+
+    fetch("/api/graph?map_version_id=" + MAP_VERSION_ID, { signal: controller.signal, cache: "no-store"})
+    .then(async (response) => {
+      const body = await response.json();
+      // reading the answer
+
+      if (!response.ok) {
+
+        throw new Error(body?.error?.message ?? "Graph request failed (" + response.status + ")");
+        // server says no
       }
-      const p = await supabase.from("pose_samples")
-        .select("sample_id,world_position,heading_deg,tracking_status,captured_at,device_id,data_origin")
-        .eq("map_version_id", MAP_VERSION_ID)
-        .order("captured_at", { ascending: false }).limit(1);
-      if (cancelled) return;
-      if (p.error) { setError(p.error.message); return; }
-      if (p.data?.length) setPose(p.data[0] as Pose);
-    })();
 
-    const channel = supabase
-      .channel("live-poses")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "pose_samples",
-          filter: `map_version_id=eq.${MAP_VERSION_ID}`,
-        },
-        (payload) => {
-          const next = payload.new as Pose;
-          setPose((prev) => (!prev || next.captured_at >= prev.captured_at ? next : prev));
-        }
-      )
-      .subscribe();
+      setGraph(body as GraphResponse);
+      // saving the map
 
-    const tick = setInterval(() => setNow(Date.now()), 500);
-    return () => {
-      cancelled = true;
-      ctl.abort();
-      supabase.removeChannel(channel);
-      clearInterval(tick);
-    };
+    })
+    .catch((error: Error) => {
+
+      if(error.name !== "AbortError") {
+
+        setGraphError(error.message);
+
+      }
+      // show the error unless it was cancelled on purpose
+
+    });
+
+    return () => controller.abort();
+    // clean 
+    // cancel if the page closes
+
   }, []);
+
+  // Loading the graph end ------------
+
+  // The phone we navigate with -------
 
   const nodes = useMemo(() => graph?.nodes ?? [], [graph]);
   const segments = useMemo(() => graph?.segments ?? [], [graph]);
-  const destinations = useMemo(() => (graph?.destinations ?? []).filter((d) => d.is_active), [graph]);
-  const byId = useMemo(() => new Map(nodes.map((n) => [n.node_id, n])), [nodes]);
-  // Same place names, order, and distance format as /viewer.
+  const destinations = useMemo(() => (graph?.destinations ?? []).filter((destination) => destination.is_active), [graph]);
+  // pieces of the graph
+
   const places = useMemo(() => placesFor(nodes, destinations), [nodes, destinations]);
-  const destinationPlaces = places.filter((p) => p.destination_id !== null);
+  // one place per node
+  // same names in /viewer
 
-  // Auto start = node nearest the phone, with hysteresis. Derived during render (no effect needed).
-  const wantedAuto = pose && nodes.length
-    ? pickStartNode(nodes, { x_m: pose.world_position.x_m, z_m: pose.world_position.z_m }, autoStartId)?.node_id ?? null
-    : null;
-  if (wantedAuto !== autoStartId) setAutoStartId(wantedAuto);
+  const destinationPlaces = places.filter((place) => place.destination_id !== null);
+  // only the places you can navigate to
 
-  const startId = startChoice === AUTO ? autoStartId : startChoice;
-  const routeKey = startId && destinationId ? `${startId}|${destinationId}` : null;
+  const nodeName = placeNamer(places);
+  // node_id to place name
+
+  const navigationPhone = pickNavigationPhone(phones);
+  // the visitor phone
+  // or the newest phone if we dont know the visitor 
+
+  const trackingColor = getTrackingColor(navigationPhone === null ? null : navigationPhone.latestMessage, nowMs);
+  // R4.1 green, yellow, red, or gray
+
+  let livePosition: Xz | null = null;
+  // where the phone is on the floor
+
+  if (navigationPhone !== null && navigationPhone.latestPosition !== null && navigationPhone.latestPosition.world_position !== null) {
+    // we have a position for this phone
+
+    livePosition = { x_m: navigationPhone.latestPosition.world_position.x_m, z_m: navigationPhone.latestPosition.world_position.z_m };
+    // keeping only x and z
+
+  }
+
+  let ageInSeconds: number | null = null;
+  // how old the newest message is
+
+  if (navigationPhone !== null) {
+
+    ageInSeconds = (nowMs - new Date(navigationPhone.latestMessage.captured_at).getTime()) / 1000;
+    // subtract when it was sent in seconds
+
+  }
+
+  // The phone we navigate with end ---
+
+  // Live start -----------------------
+  // R6.4, R6.2.2, and R6.3
+
+  let attachment: SegmentAttachment | null = null;
+  // where the phone snaps onto the nearest path
+  // R6.2.2
+
+  let liveStartProblem: string | null = null;
+  
+  if (startChoice === AUTO && canStartFromLivePosition(trackingColor) && livePosition !== null && segments.length > 0) {
+    // R6.4: we only pick and repick the live start when the status chip is green
+
+    attachment = findNearestSegment(segments, livePosition);
+    // R6.2.2 snap onto the nearest open path
+
+    liveStartProblem = checkLiveStart(attachment);
+    // R6.3 too far from any path
+
+    let wantedStartId: string | null = null;
+    // the start node we want
+
+    if (liveStartProblem === null && attachment !== null) {
+      // close enough
+
+      const segment = attachment.segment;
+      // the path snapped onto
+
+      if (autoStartId === segment.start_node_id || autoStartId === segment.end_node_id) {
+        // the node we use is one end of this path
+
+        wantedStartId = autoStartId;
+        // keeping it so the route doesnt go back and forth
+
+      } else {
+
+        const startNode = startNodeForAttachment(attachment, nodes);
+        // otherwise use the closer end of the path
+
+        wantedStartId = startNode === null ? null : startNode.node_id;
+
+      }
+    }
+
+    if (wantedStartId !== autoStartId) {
+      // the start changed
+
+      setAutoStartId(wantedStartId);
+      // saving it 
+
+    }
+
+  }
+  // when the chip isn't green we keep the old start
+  // the route wouldnt disappear if tracking is yellow
+
+  if (startChoice === AUTO && autoStartId === null && liveStartProblem === null) {
+    // using the live position but we don't have a start yet
+
+    if (!canStartFromLivePosition(trackingColor)) {
+      // R6.4 status chip isnt green
+
+      liveStartProblem = "A live start needs an accurate position (green). The phone currently says: " + getTrackingLabel(trackingColor);
+
+    } else if (livePosition === null) {
+
+      liveStartProblem = "Waiting for the phone's position.";
+
+    }
+  }
+
+  // Live start end -------------------
+
+  // Getting the route ----------------
+
+  let startId: string | null = null;
+  // the node the route starts from
+
+  if (startChoice === AUTO) {
+
+    startId = autoStartId;
+    // live position
+     
+  } else {
+
+    startId = startChoice;
+    // the node picked by the user
+
+  }
+
+  const routeKey = startId && destinationId ? startId + "|" + destinationId : null;
+  // a key for the start to this destination
 
   useEffect(() => {
-    if (!routeKey) return;
-    const [start_node_id, destination_id] = routeKey.split("|");
-    const ctl = new AbortController();
-    const request: RouteRequest = { map_version_id: MAP_VERSION_ID, start_node_id, destination_id, profile: "human" };
+    // asks /api/route everytime the start or the destination changes
+
+    if (!routeKey) {
+
+      return;
+
+    }
+    // nothing to ask for
+
+    const [startNodeId, routeDestinationId] = routeKey.split("|");
+    // split the key back into its two ids
+
+    const controller = new AbortController();
+    // lets us cancel if the start changes again
+
+    const request: RouteRequest = {map_version_id: MAP_VERSION_ID, start_node_id: startNodeId, destination_id: routeDestinationId, profile: "human" };
+    // what we send to the server
+
     fetch("/api/route", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request), signal: ctl.signal,
+      body: JSON.stringify(request), signal: controller.signal,
+    
     })
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok) throw new Error(body?.error?.message ?? `Route request failed (${res.status})`);
+
+      .then(async (response) => {
+
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body?.error?.message ?? "Route request failed (" + response.status + ")");
+    
+        }
         setRouteState({ key: routeKey, route: body as RouteResponse, error: null });
+        // saving the route
+
       })
-      .catch((e: Error) => {
-        if (e.name !== "AbortError") setRouteState({ key: routeKey, route: null, error: e.message });
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") {
+          setRouteState({ key: routeKey, route: null, error: error.message });
+        
+        }
+        // saving the error
       });
-    return () => ctl.abort();
+
+      return () => controller.abort();
+
   }, [routeKey]);
 
   const routeResult = routeState && routeState.key === routeKey ? routeState : null;
+  // only use the answer if it is for the start or destination we have right now
+
   const route = routeResult?.route ?? null;
-  const polyline = useMemo(() => (route ? routePolyline(segments, route.steps) : []), [route, segments]);
+  // the route itself
 
-  const view = useMemo(() => {
-    if (!nodes.length) return null;
-    const xs = nodes.map((n) => n.position.x_m);
-    const zs = nodes.map((n) => n.position.z_m);
-    // Extra room on the right so node labels are not clipped.
-    const minX = Math.min(...xs) - 3;
-    const maxX = Math.max(...xs) + 7;
-    const minZ = Math.min(...zs) - 3;
-    const maxZ = Math.max(...zs) + 3;
-    return { minX, maxZ, w: maxX - minX, h: maxZ - minZ };
-  }, [nodes]);
+  const routePoints = useMemo(() => (route ? routePolyline(segments, route.steps) : []), [route, segments]);
+  // the route as a list of points
 
-  const ageS = pose ? (now - new Date(pose.captured_at).getTime()) / 1000 : null;
-  const live = !!pose && pose.tracking_status === "valid" && ageS !== null && ageS < 5;
+  const destination = destinations.find((item) => item.destination_id === destinationId) ?? null;
+  // the destination object
 
-  const destination = destinations.find((d) => d.destination_id === destinationId) ?? null;
-  const destNode = destination ? byId.get(destination.node_id) ?? null : null;
-  const arrived = live && !!pose && !!destNode &&
-    distance(destNode.position, { x_m: pose.world_position.x_m, z_m: pose.world_position.z_m }) <= ARRIVED_M;
-  const nodeLabel = placeNamer(places);
-  const segLength = (id: string) => segments.find((s) => s.segment_id === id)?.distance_m ?? 0;
+  const destinationNode = destination ? nodes.find((node) => node.node_id === destination.node_id) ?? null : null;
+  // the node the destination is on
 
-  const sx = (x: number) => x - view!.minX;
-  const sy = (z: number) => view!.maxZ - z;
+  const arrived = trackingColor === "green" && livePosition !== null && destinationNode !== null && 
+    distance(destinationNode.position, livePosition) <= ARRIVED_M;
+    // arrive = accurate position within one meter of the destination
+
+  const segmentLength = (segmentId: string) => segments.find((segment) => segment.segment_id === segmentId)?.distance_m ?? 0;
+  // length of just one step
+
+  // Getting the route end ------------
+
+  // Status chip text -----------------
+
+  let chipText = "";
+  // words after the status chip label
+
+  if (liveError) {
+
+    chipText = "Could not read live data: " + liveError;
+
+  } else if (ageInSeconds !== null) {
+
+    if (ageInSeconds < 60) {
+      // if age is under a minute, show seconds
+
+      chipText = "updated " + ageInSeconds.toFixed(1) + " seconds ago";
+
+    } else if (ageInSeconds < 3600 ) {
+      // if age is under an hour, show minutes
+
+      chipText = "last seen " + Math.round(ageInSeconds / 60) + " minutes ago";
+
+    } else if (ageInSeconds < 86400) {
+      // if age is under a day, show hours
+
+      chipText = "last seen " + Math.round(ageInSeconds / 3600) + " hours ago";
+
+    } else {
+      // if age is a day or more, show days
+
+      chipText = "last seen " + Math.round(ageInSeconds / 86400 ) + " days ago";
+    }
+
+    if (navigationPhone !== null && navigationPhone.latestMessage.data_origin === "synthetic") {
+
+      chipText = chipText + " . test data";
+      // making sure test data isnt mixed up with real localization
+
+    }
+  }
+
+  // Status chip text end -------------
 
   return (
-    <main className="mx-auto max-w-3xl p-4">
-      <h1 className="text-xl font-semibold">Live Navigation</h1>
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        {graph ? `${graph.site.name} · ${graph.map_version.version_label}` : "Loading map…"}
-      </p>
-      <p className="mb-3 text-sm text-gray-600 dark:text-gray-400" aria-live="polite">
-        {error
-          ? `Could not load live data: ${error}`
-          : !pose
-          ? "Waiting for the phone to send a position…"
-          : live
-          ? `Live · updated ${ageS!.toFixed(1)} s ago${pose.data_origin === "synthetic" ? " · test pose, not a real localization" : ""}`
-          : pose.tracking_status !== "valid"
-          ? `Not live · tracking ${pose.tracking_status}, updated ${ageS!.toFixed(0)} s ago`
-          : `Not live · no update for ${ageS!.toFixed(0)} s`}
-      </p>
 
-      <div className="mb-3 flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Start</span>
-          <select className={select} value={startChoice} onChange={(e) => setStartChoice(e.target.value)}>
-            <option value={AUTO}>My current location (auto)</option>
-            {places.map((p) => <option key={p.node_id} value={p.node_id}>{p.name}</option>)}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Destination</span>
-          <select className={select} value={destinationId} onChange={(e) => setDestinationId(e.target.value)}>
-            <option value="">Select a destination</option>
-            {destinationPlaces.map((p) => <option key={p.destination_id} value={p.destination_id!}>{p.name}</option>)}
-          </select>
-        </label>
-      </div>
+    <div className="min-h-screen w-full bg-purple-950 text-white">
+    {/* SFSU purple for the background */}
 
-      {view && (
-        <svg
-          viewBox={`0 0 ${view.w} ${view.h}`}
-          className="w-full rounded border bg-white"
-          style={{ aspectRatio: `${view.w} / ${view.h}` }}
-          overflow="visible"
-          role="img"
-          aria-label="Top-down map of HSS 349 with your live position and the selected route"
-        >
-          {segments.map((s) => {
-            const a = byId.get(s.start_node_id);
-            const b = byId.get(s.end_node_id);
-            if (!a || !b) return null;
-            return (
-              <line
-                key={s.segment_id}
-                x1={sx(a.position.x_m)} y1={sy(a.position.z_m)}
-                x2={sx(b.position.x_m)} y2={sy(b.position.z_m)}
-                stroke="#9ca3af" strokeWidth={0.12}
-              />
-            );
-          })}
+    <main className={"mx-auto w-full p-4 " + (viewMode === "3d" ? "max-w-6xl" : "max-w-3xl")}>
+    {/* wide page so the 3d viewer has some room */}
 
-          {polyline.length > 1 && (
-            <polyline
-              points={polyline.map((p) => `${sx(p.x_m)},${sy(p.z_m)}`).join(" ")}
-              fill="none" stroke="#f97316" strokeWidth={0.25} strokeLinecap="round" strokeLinejoin="round"
-            />
-          )}
+        <h1 className="text-xl font-semibold">Live Navigation</h1>
+        <p className="text-xs text-purple-200">
+            {graph ? graph.site.name + " . " + graph.map_version.version_label : graphError ? "Couldn't load the map: " + graphError : "Loading map..."}
 
-          {nodes.map((n) => (
-            <g key={n.node_id}>
-              <circle cx={sx(n.position.x_m)} cy={sy(n.position.z_m)} r={0.2} fill="#374151" />
-              <text x={sx(n.position.x_m) + 0.3} y={sy(n.position.z_m) - 0.3}
-                fontSize={0.4} fill="#374151">{nodeLabel(n.node_id)}</text>
-            </g>
-          ))}
+            </p>
+            {/* the side and map version */}
 
-          {destNode && (
-            <circle cx={sx(destNode.position.x_m)} cy={sy(destNode.position.z_m)} r={0.45}
-              fill="none" stroke="#16a34a" strokeWidth={0.12} />
-          )}
+            <div className="my-3 flex flex-wrap items-center justify-between gap-3">
 
-          {pose && (
-            <g opacity={live ? 1 : 0.4}>
-              {pose.heading_deg !== null && (
-                <line
-                  x1={sx(pose.world_position.x_m)}
-                  y1={sy(pose.world_position.z_m)}
-                  x2={sx(pose.world_position.x_m) + 0.9 * Math.sin((pose.heading_deg * Math.PI) / 180)}
-                  y2={sy(pose.world_position.z_m) - 0.9 * Math.cos((pose.heading_deg * Math.PI) / 180)}
-                  stroke="#2563eb" strokeWidth={0.1}
-                />
-              )}
-              <circle
-                cx={sx(pose.world_position.x_m)}
-                cy={sy(pose.world_position.z_m)}
-                r={0.3} fill="#2563eb"
-              />
-            </g>
-          )}
-        </svg>
-      )}
+                <TrackingChip trackingColor={trackingColor} extraText={chipText} />
+                {/* R4.1 status chip */}
 
-      <section className="mt-3 text-sm" aria-live="polite">
-        {!destination && <p className="text-gray-600 dark:text-gray-400">Select a destination to see the shortest route.</p>}
-        {destination && !startId && <p className="text-gray-600 dark:text-gray-400">Waiting for the phone&apos;s position. You can also select a start manually.</p>}
-        {destination && startId && !routeResult && <p className="text-gray-600 dark:text-gray-400">Finding route…</p>}
-        {routeResult?.error && <p role="alert" className="text-red-600 dark:text-red-400">Could not calculate a route: {routeResult.error}</p>}
-        {arrived && <p className="font-semibold text-green-700 dark:text-green-400">You have arrived at {destination!.name}.</p>}
-        {route?.status === "unreachable" && <p className="text-red-600 dark:text-red-400">No permitted route from {nodeLabel(route.start_node_id)} to {destination!.name}.</p>}
-        {route?.status === "valid" && !arrived && (
-          route.steps.length === 0
-            // Same start and destination node. Only the live phone check above may say "arrived".
-            ? <p className="text-gray-600 dark:text-gray-400">Start and destination are the same ({destination!.name}). No route needed.</p>
-            : (
-              <>
-                <p className="font-medium">
-                  {nodeLabel(route.start_node_id)} → {destination!.name} · {formatMeters(route.total_distance_m)}
-                </p>
-                <ol className="mt-1 list-decimal pl-5 text-gray-700 dark:text-gray-300">
-                  {route.steps.map((s) => (
-                    <li key={s.segment_id}>
-                      {nodeLabel(s.from_node_id)} → {nodeLabel(s.to_node_id)} ({formatMeters(segLength(s.segment_id))})
-                    </li>
-                  ))}
-                </ol>
-              </>
-            )
-        )}
-      </section>
-    </main>
+                <div className="inline-flex rounded-md border border-white/20 text-sm" role="group" aria-label="Map view">
+                {/* 2d and 3d toggle */}
+
+                    <button type="button" aria-pressed={viewMode === "2d"} onClick={() => setViewMode("2d")}
+                        className={"rounded-l-md px-3 py-1.5 " + (viewMode === "2d" ? "bg-yellow-400 font-semibold text-gray-900" : "bg-white/10 text-white hover:bg-white/20")}>
+                          2D live
+                        </button>
+
+                        <button type="button" aria-pressed={viewMode === "3d"} onClick={() => setViewMode("3d")}
+                            className={"rounded-r-md px-3 py-1.5 " + (viewMode === "3d" ? "bg-yellow-400 font-semibold text-gray-900" : "bg-white/10 text-white hover:bg-white/20")}>
+                              3D
+                            </button>
+                          </div>
+                      </div>
+
+                      {viewMode === "3d" && (
+                      // 3d tab
+
+                          <div className="h-[75vh] w-full overflow-hidden rounded">
+                              <RoutePlanner />
+                          </div>
+                        
+                      )}
+
+                      {viewMode === "2d" && (
+                        // 2d tab
+
+                            <>
+
+                              <div className="mb-3 flex flex-wrap gap-3">
+
+                                  <label className="flex flex-col gap-1 text-sm">
+                                      <span className="font-medium">Start</span>
+                                      <select className={selectClasses} value={startChoice} onChange={(event) => setStartChoice(event.target.value)}>
+                                          <option value={AUTO} className="text-gray-900"> My current location (live)</option>
+                                          {places.map((place) => <option key={place.node_id} value={place.node_id} className="text-gray-900">{place.name}</option>)}
+                                          
+                                      </select>
+                                  </label>
+                                  {/*  dropdown */}
+
+                                  <label className="flex flex-col gap-1 text-sm">
+                                      <span className="font-medium">Destination</span>
+                                      <select className={selectClasses} value={destinationId} onChange={(event) => setDestinationId(event.target.value)}>
+                                          <option value="" className="text-gray-900">Select a destination</option>
+                                          {destinationPlaces.map((place) => <option key={place.node_id} value={place.destination_id ?? ""} className="text-gray-900">{place.name}</option>)}
+                                      </select>
+                                    </label>
+                                    {/*  destination dropdown */}
+
+                              </div>
+
+                              {graph && (
+                                <LiveMap
+                                  graph={graph}
+                                  phones={listPhones(phones)}
+                                  nowMs={nowMs}
+                                  routePoints={routePoints}
+                                  destinationNode={destinationNode}
+                                  attachLine={attachment !== null && livePosition !== null ? { from: livePosition, to: attachment.attachPoint } : null}
+                                  highlightedDeviceId={navigationPhone === null ? null : navigationPhone.deviceId}
+
+                                />
+                      
+                              )}
+                              {/* the shared 2d map */}
+
+                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-purple-100">
+                                {/* legend */}
+
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "lime" }} />Open path</span>
+
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "red" }} />Closed path</span>
+
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Route</span>
+
+                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#facc15" }} />Visitor</span>
+
+                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Robot (proxy phone)</span>
+
+                                
+                              </div>
+
+                              <section className="mt-3 text-sm" aria-live="polite">
+                                {/* route messages */}
+
+                                  {startChoice === AUTO && liveStartProblem && <p className="font-medium text-yellow-300">{liveStartProblem}</p>}
+                                  {/* R6.3 and R6.4 message */}
+
+                                  {!destination && <p className="text-purple-200">Select a destination to see the shortest route.</p>}
+                                  {destination && startId && !routeResult && <p className="text-purple-200">Finding route...</p>}
+                                  {routeResult?.error && <p role="alert" className="font-medium text-red-300">Could not calculate a route: {routeResult.error}</p>}
+
+                                  {arrived && destination && <p className="font-semibold text-lime-300">You have arrived at {destination.name}.</p>}
+                                  {route?.status === "unreachable" && destination && <p className="font-medium text-red-300">No permitted route from {nodeName(route.start_node_id)} to {destination.name}.</p>}
+
+                                  {route?.status === "valid" && !arrived && destination && (
+                                      route.steps.length === 0 ? <p className="font-medium text-yellow-300">The start and destination are the same ({destination.name}). No route needed.</p>
+
+                                      : (
+
+                                          <>
+                                              <p className="text-3xl font-semibold text-yellow-300">{formatMeters(route.total_distance_m)}</p>
+                                              {/* the distance in gold, like /viewer */}
+                                              <p className="mt-1 font-medium">{nodeName(route.start_node_id)} → {destination.name}</p>
+                                              <ol className="mt-1 list-decimal pl-5 text-purple-100">
+                                                {route.steps.map((step) => (
+
+                                                    <li key={step.segment_id}>
+                                                        {nodeName(step.from_node_id)} → {nodeName(step.to_node_id)} ({formatMeters(segmentLength(step.segment_id))})
+
+                                                    </li>
+                                                ))}
+                                              </ol>
+                                          </>
+                                      )
+                                  )}
+                              </section>
+
+                              <section className="mt-4 text-sm">
+                                {/* R19, every phone on this map with its status chip */}
+
+                                  <h2 className="mb-1 font-medium">Phones on this map</h2>
+
+                                  {listPhones(phones).length === 0 && <p className="text-purple-200">No phone has sent anything yet.</p>}
+
+                                  <ul className="flex flex-col gap-1">
+                                      {listPhones(phones).map((phone) => (
+                                          <li key={phone.deviceId} className="flex flex-wrap items-center gap-2">
+                                              <span className="w-40 font-medium">{getDeviceName(getDeviceType(phone.deviceId))}</span>
+                                              <TrackingChip trackingColor={getTrackingColor(phone.latestMessage, nowMs)} />
+                                              <span className="text-xs text-purple-300">{phone.deviceId}</span>
+
+                                          </li>
+                                      ))}
+                                  </ul>
+
+                              </section>
+                          </>
+                    )}
+
+                </main>
+                </div>
+      
   );
 }
+
+
+
+

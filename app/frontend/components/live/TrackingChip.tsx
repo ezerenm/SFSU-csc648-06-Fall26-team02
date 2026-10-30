@@ -80,10 +80,10 @@ export default function TrackingChip({ trackingColor, extraText }: TrackingChipP
         <span
             className={"inline-flex items-center gap-2 rounded-full borderpx-3 py-1 text-sm font-medium " + getChipClasses(trackingColor)}
             role="status"
-            aria-lives="polite"
+            aria-live="polite"
             >
         
-            <span className={"h-2.5 w-2.5 rounded-full " + getDotClasses(trackingColor)} aria-hodden="true" />
+            <span className={"h-2.5 w-2.5 rounded-full " + getDotClasses(trackingColor)} aria-hidden="true" />
             {/* small colored circle */}
 
             {getTrackingLabel(trackingColor)}
