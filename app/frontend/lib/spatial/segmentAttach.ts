@@ -1,6 +1,6 @@
 
 
-import type { GraphNode, PathSegment } from "./contracts";
+import type { GraphNode, PathSegment, Profile } from "./contracts";
 import { distance, type Xz } from "./liveRoute";
 // getting the node and segment shapes from contracts
 // distance() is meters between two points
@@ -83,7 +83,9 @@ export function closestPointOnLine(position: Xz, pointA: Xz, pointB: Xz): Xz {
 
 // Finding the nearest path ---------------------------------------------------
 
-export function findNearestSegment(segments: readonly PathSegment[], position: Xz): SegmentAttachment | null {
+export function findNearestSegment(segments: readonly PathSegment[], position: Xz, profile: Profile = "human"): SegmentAttachment | null {
+    // profile = human is default
+    // if the page doesn't specify, we assume user is human
     // R6.2.2 checks every open path and returns the one closest to the phone
     // readonly so we don't change the list
     // return null if there are no open paths
@@ -100,6 +102,14 @@ export function findNearestSegment(segments: readonly PathSegment[], position: X
 
             continue;
             // skip bad segment and move onto next segment
+
+        }
+
+        if (profile === "robot" && segment.robot_access === "restricted") {
+            // the robot proxy isn't allowed on this path
+
+            continue;
+            // skip them
         }
 
         for (let pointIndex = 0; pointIndex < segment.geometry.length - 1; pointIndex++) {
@@ -137,6 +147,8 @@ export function findNearestSegment(segments: readonly PathSegment[], position: X
 
 export function checkLiveStart(attachment: SegmentAttachment | null): string | null {
     // r6.3 returning null if the start is okay / returning an error if there is something wrong
+    // /live currently only uses one map (HSS 349), so we don't check for map_version_id yet
+    // when there are multiple maps, we check the phone's map_version_id matches before calling this
 
     if (attachment === null) {
         // no attachment

@@ -99,5 +99,34 @@ test("checkLiveStart blocks far start and startNodeForAttachment picks closer en
 
 })
 
+test("all segments closed means no open path segment", () => {
+
+    const closedAB = makeSegment("AB", nodeA, nodeB, "closed");
+
+    const closedBC = makeSegment("BC", nodeB, nodeC, "closed");
+
+    const noAttachment = findNearestSegment([closedAB, closedBC], { x_m: 1, z_m: 0 });
+
+    assert.equal(noAttachment, null);
+
+    const message = checkLiveStart(noAttachment);
+    
+    assert.equal(message !== null && message.includes("no open path segment"), true);
+    
+})
+
+test("robot profile skips robot restricted segments, human doesn't skip them", () => {
+
+    const segmentAB = makeSegment("AB", nodeA, nodeB);
+
+    const restrictedBC = { ...makeSegment("BC", nodeB, nodeC), robot_access: "restricted" as const };
+
+    assert.equal(findNearestSegment([segmentAB, restrictedBC], { x_m: 3.5, z_m: 2 })?.segment.segment_id, "BC");
+
+    assert.equal(findNearestSegment([segmentAB, restrictedBC], { x_m: 3.5, z_m: 2 }, "robot")?.segment.segment_id, "AB");
+
+
+})
+
 // Testing end ----------------------------------------------------------------
 
