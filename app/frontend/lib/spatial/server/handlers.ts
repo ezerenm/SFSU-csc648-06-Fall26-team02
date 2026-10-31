@@ -28,7 +28,12 @@ export function createHandlers(repository: () => SpatialRepository, route: Routi
       const result = await store.attempts(filters);
       return { ...result, limit: filters.limit, offset: filters.offset, data_origin: "synthetic" };
     }),
-    /** GET /api/health?map_version_id=…[&mode=live|simulation] — R14 health per evaluation test point. */
+    /**
+     * GET /api/health?map_version_id=<uuid>[&mode=live|simulation]
+     * R14 health for every evaluation test point on a visible map.
+     * Order: validate input (400) -> check the map is visible (404) -> read attempts -> compute.
+     * A point with no attempts gets an empty results list; the UI shows it as gray.
+     */
     health: (request: Request) => respond(async () => {
       const params = query(request, ["map_version_id", "mode"]);
       const id = uuid(params.get("map_version_id"), "map_version_id");
