@@ -97,6 +97,8 @@ export function createHandlers(
         return { ...base, ...parsed, model_version: answer.model_version, status, completed_at: new Date().toISOString() };
       } catch (error) {
         const status = error instanceof GeminiError && error.kind === "timed_out" ? "timed_out" : "failed";
+        // Server log only: the browser gets the status, never the error details.
+        console.warn(`[health-summary] ${status}: ${error instanceof Error ? error.message : "unknown error"}`);
         return { ...base, ...empty, status, completed_at: new Date().toISOString() };
       }
     }),
