@@ -1,13 +1,20 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AttemptFilters, GraphResponse, LocalizationAttempt } from "../contracts";
+import type { HealthAttempt, HealthMode } from "../health";
 import { ApiError } from "./errors";
 
 export interface SpatialRepository {
   graph(mapVersionId: string): Promise<GraphResponse | null>;
   attempts(filters: AttemptFilters): Promise<{ items: LocalizationAttempt[]; total: number }>;
+  /** Completed attempts of one mode on one map, for health (R14). RLS decides what is visible. */
+  healthAttempts(mapVersionId: string, mode: HealthMode): Promise<HealthAttempt[]>;
 }
 
 const ATTEMPT_COLUMNS = "attempt_id,map_version_id,test_point_id,device_id,sdk_version,mode,data_origin,condition_label,camera_direction,started_at,ended_at,outcome,latency_ms,failure_reason,horizontal_error_m,error_is_valid,received_at,test_point:test_points!inner(label)";
+
+const HEALTH_COLUMNS = "attempt_id,test_point_id,map_version_id,device_id,mode,outcome,latency_ms,horizontal_error_m,error_is_valid";
+/** PostgREST's default max rows. Plenty for one map in this course; raise with a DB-side aggregate if it ever binds. */
+export const HEALTH_ATTEMPT_LIMIT = 1000;
 
 function databaseUnavailable(): never {
   throw new ApiError(503, "DATABASE_UNAVAILABLE", "Demo data is temporarily unavailable. Please try again.");
@@ -49,6 +56,21 @@ export function supabaseRepository(client: SupabaseClient): SpatialRepository {
         }
         if (error || count === null) databaseUnavailable();
         return { items: (data ?? []) as unknown as LocalizationAttempt[], total: count };
+      } catch { databaseUnavailable(); }
+    },
+    async healthAttempts(mapVersionId, mode) {
+      try {
+        const { data, error } = await client.from("localization_attempts")
+          .select(HEALTH_COLUMNS)
+          .eq("map_version_id", mapVersionId)
+          .eq("mode", mode)
+          .neq("outcome", "in_progress")
+          .order("started_at", { ascending: false })
+          .order("attempt_id", { ascending: true })
+          .range(0, HEALTH_ATTEMPT_LIMIT - 1)
+          .abortSignal(AbortSignal.timeout(5000));
+        if (error) databaseUnavailable();
+        return (data ?? []) as HealthAttempt[];
       } catch { databaseUnavailable(); }
     },
   };
