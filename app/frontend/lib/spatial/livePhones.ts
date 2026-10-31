@@ -52,6 +52,9 @@ export type PhoneState = {
     latestPosition: PhoneMessage | null;
     // the newest massage that has a position
 
+    localizingSince: string | null;
+    // when this phone started localizing
+
 };
 
 export type PhonesByDevice = Record<string, PhoneState>;
@@ -136,10 +139,27 @@ export function addPhoneMessage(phones: PhonesByDevice, message: PhoneMessage): 
     
     }
 
+let localizingSince: string | null = null;
+
+if (latestMessage.tracking_status === "localizing") {
+    // phone is localizing
+
+    if (oldState !== undefined && oldState.latestMessage.tracking_status === "localizing" && oldState.localizingSince !== null) {
+        // if phone was already localizing
+
+        localizingSince = oldState.localizingSince;
+        // keep original start time
+
+    } else {
+
+        localizingSince = latestMessage.received_at;
+    }
+}
+
 const newPhones: PhonesByDevice = { ...phones };
 // copying every phone into a new object
 
-newPhones[message.device_id] = { deviceId: message.device_id, latestMessage: latestMessage, latestPosition: latestPosition };
+newPhones[message.device_id] = { deviceId: message.device_id, latestMessage: latestMessage, latestPosition: latestPosition, localizingSince: localizingSince };
 
 return newPhones;
 
