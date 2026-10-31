@@ -4,6 +4,7 @@ CSC 648/848 Software Engineering, Section 06, Team 02 (Fall 2026)
 
 - **Live site:** https://sfsu-csc648-06-fall26-team02.vercel.app
 - **About page:** https://sfsu-csc648-06-fall26-team02.vercel.app/about
+- **M3 task board:** https://github.com/users/tduong64/projects/1
 
 ## Team
 
@@ -15,6 +16,8 @@ CSC 648/848 Software Engineering, Section 06, Team 02 (Fall 2026)
 | Sumit Kumar | AI Master | [@Sumitkumar06](https://github.com/Sumitkumar06) |
 | Tyler Duong | Scrum Master | [@tduong64](https://github.com/tduong64) |
 | Ezeren Masangcay | GitHub Master | [@ezerenm](https://github.com/ezerenm) |
+
+
 
 ## Tech Stack
 
