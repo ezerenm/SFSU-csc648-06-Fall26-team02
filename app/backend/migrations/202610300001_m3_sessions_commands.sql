@@ -22,7 +22,6 @@ create table public.navigation_sessions (
   check ((mode = 'live' and data_origin = 'live_sdk')
       or (mode = 'simulation' and data_origin = 'synthetic')
       or (mode = 'replay' and data_origin = 'recorded')),
-  check (agent_type <> 'robot_proxy' or mode = 'simulation'),
   check ((status = 'active' and ended_at is null)
       or (status <> 'active' and ended_at is not null and ended_at >= started_at))
 );
@@ -67,18 +66,84 @@ alter table public.pose_samples
 alter table public.pose_samples
   alter column world_position drop not null;
 alter table public.pose_samples
+  add constraint poses_world_position_shape
+  check (world_position is null or public.m2_valid_position(world_position));
+alter table public.pose_samples
+  add constraint poses_valid_has_position
+  check (tracking_status <> 'valid' or
+    (provider_pose is not null and world_position is not null));
+alter table public.pose_samples
   add constraint poses_session_same_map
   foreign key (map_version_id, session_id)
   references public.navigation_sessions(map_version_id, session_id);
 create index pose_samples_session_time_idx
   on public.pose_samples(session_id, captured_at desc);
 
+-- A validated accuracy result must trace to a pose from this attempt and map.
+alter table public.pose_samples
+  add constraint poses_map_attempt_sample_unique
+  unique (map_version_id, attempt_id, sample_id);
+alter table public.localization_attempts
+  drop constraint localization_attempts_valid_pose_sample_id_check;
+alter table public.localization_attempts
+  drop constraint localization_attempts_horizontal_error_m_check;
+alter table public.localization_attempts
+  drop constraint localization_attempts_error_is_valid_check;
+alter table public.localization_attempts
+  add constraint attempts_valid_pose_same_attempt
+  foreign key (map_version_id, attempt_id, valid_pose_sample_id)
+  references public.pose_samples(map_version_id, attempt_id, sample_id);
+alter table public.localization_attempts
+  add constraint attempts_horizontal_error_nonnegative
+  check (horizontal_error_m is null or
+    (horizontal_error_m >= 0 and horizontal_error_m < 'Infinity'::float8));
+alter table public.localization_attempts
+  add constraint attempts_valid_error_source
+  check (not error_is_valid or
+    (horizontal_error_m is not null and outcome = 'success'
+     and data_origin = 'live_sdk' and valid_pose_sample_id is not null));
+
+create function public.m3_check_valid_accuracy() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.error_is_valid and not exists (
+    select 1 from public.test_points t
+    join public.pose_samples p
+      on p.map_version_id = t.map_version_id
+    where t.map_version_id = new.map_version_id
+      and t.test_point_id = new.test_point_id
+      and t.reference_is_verified
+      and p.sample_id = new.valid_pose_sample_id
+      and p.attempt_id = new.attempt_id
+      and p.tracking_status = 'valid'
+      and p.data_origin = 'real'
+  ) then
+    raise exception 'Valid accuracy requires a verified reference and real valid pose'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+create trigger attempts_valid_accuracy
+  before insert or update of error_is_valid, test_point_id, map_version_id,
+    valid_pose_sample_id on public.localization_attempts
+  for each row execute function public.m3_check_valid_accuracy();
+
+-- Health reads may include real attempts only for published, public demo maps.
+create policy m3_public_demo_live_attempts on public.localization_attempts
+  for select to anon, authenticated
+  using (data_origin = 'live_sdk' and exists (
+    select 1 from public.map_versions m
+    join public.sites s on s.site_id = m.site_id
+    where m.map_version_id = localization_attempts.map_version_id
+      and m.publication_state = 'published' and s.is_public_demo));
+
 create table public.simulated_agents (
   agent_id uuid primary key default gen_random_uuid(),
   session_id uuid not null unique,
   map_version_id uuid not null,
   -- A route_id will be added with the stored routes table.
-  position jsonb not null check (public.m2_valid_position(position)),
+  position jsonb check (position is null or public.m2_valid_position(position)),
   current_step_index integer check (current_step_index >= 0),
   step_progress_m double precision not null default 0
     check (step_progress_m >= 0 and step_progress_m < 'Infinity'::float8),
@@ -128,9 +193,8 @@ begin
     where s.session_id = new.session_id
       and s.map_version_id = new.map_version_id
       and s.agent_type = 'robot_proxy'
-      and s.mode = 'simulation'
   ) then
-    raise exception 'Robot records require a robot_proxy simulation session'
+    raise exception 'Robot records require a robot_proxy session'
       using errcode = '23514';
   end if;
   return new;

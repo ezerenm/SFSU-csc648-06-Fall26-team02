@@ -17,7 +17,7 @@ const supabase = createClient(
 type Pos = { x_m: number; y_m: number; z_m: number };
 type Pose = {
   sample_id: string;
-  world_position: Pos;
+  world_position: Pos | null;
   heading_deg: number | null;
   tracking_status: string;
   captured_at: string;
@@ -90,14 +90,15 @@ export default function LivePage() {
   const nodes = useMemo(() => graph?.nodes ?? [], [graph]);
   const segments = useMemo(() => graph?.segments ?? [], [graph]);
   const destinations = useMemo(() => (graph?.destinations ?? []).filter((d) => d.is_active), [graph]);
+  const currentPosition = pose?.world_position ?? null;
   const byId = useMemo(() => new Map(nodes.map((n) => [n.node_id, n])), [nodes]);
   // Same place names, order, and distance format as /viewer.
   const places = useMemo(() => placesFor(nodes, destinations), [nodes, destinations]);
   const destinationPlaces = places.filter((p) => p.destination_id !== null);
 
   // Auto start = node nearest the phone, with hysteresis. Derived during render (no effect needed).
-  const wantedAuto = pose && nodes.length
-    ? pickStartNode(nodes, { x_m: pose.world_position.x_m, z_m: pose.world_position.z_m }, autoStartId)?.node_id ?? null
+  const wantedAuto = currentPosition && nodes.length
+    ? pickStartNode(nodes, { x_m: currentPosition.x_m, z_m: currentPosition.z_m }, autoStartId)?.node_id ?? null
     : null;
   if (wantedAuto !== autoStartId) setAutoStartId(wantedAuto);
 
@@ -141,12 +142,12 @@ export default function LivePage() {
   }, [nodes]);
 
   const ageS = pose ? (now - new Date(pose.captured_at).getTime()) / 1000 : null;
-  const live = !!pose && pose.tracking_status === "valid" && ageS !== null && ageS < 5;
+  const live = !!pose && !!currentPosition && pose.tracking_status === "valid" && ageS !== null && ageS < 5;
 
   const destination = destinations.find((d) => d.destination_id === destinationId) ?? null;
   const destNode = destination ? byId.get(destination.node_id) ?? null : null;
-  const arrived = live && !!pose && !!destNode &&
-    distance(destNode.position, { x_m: pose.world_position.x_m, z_m: pose.world_position.z_m }) <= ARRIVED_M;
+  const arrived = live && !!currentPosition && !!destNode &&
+    distance(destNode.position, { x_m: currentPosition.x_m, z_m: currentPosition.z_m }) <= ARRIVED_M;
   const nodeLabel = placeNamer(places);
   const segLength = (id: string) => segments.find((s) => s.segment_id === id)?.distance_m ?? 0;
 
@@ -168,6 +169,8 @@ export default function LivePage() {
           ? `Live · updated ${ageS!.toFixed(1)} s ago${pose.data_origin === "synthetic" ? " · test pose, not a real localization" : ""}`
           : pose.tracking_status !== "valid"
           ? `Not live · tracking ${pose.tracking_status}, updated ${ageS!.toFixed(0)} s ago`
+          : !currentPosition
+          ? "Not live · position unavailable"
           : `Not live · no update for ${ageS!.toFixed(0)} s`}
       </p>
 
@@ -231,20 +234,20 @@ export default function LivePage() {
               fill="none" stroke="#16a34a" strokeWidth={0.12} />
           )}
 
-          {pose && (
+          {pose && currentPosition && (
             <g opacity={live ? 1 : 0.4}>
               {pose.heading_deg !== null && (
                 <line
-                  x1={sx(pose.world_position.x_m)}
-                  y1={sy(pose.world_position.z_m)}
-                  x2={sx(pose.world_position.x_m) + 0.9 * Math.sin((pose.heading_deg * Math.PI) / 180)}
-                  y2={sy(pose.world_position.z_m) - 0.9 * Math.cos((pose.heading_deg * Math.PI) / 180)}
+                  x1={sx(currentPosition.x_m)}
+                  y1={sy(currentPosition.z_m)}
+                  x2={sx(currentPosition.x_m) + 0.9 * Math.sin((pose.heading_deg * Math.PI) / 180)}
+                  y2={sy(currentPosition.z_m) - 0.9 * Math.cos((pose.heading_deg * Math.PI) / 180)}
                   stroke="#2563eb" strokeWidth={0.1}
                 />
               )}
               <circle
-                cx={sx(pose.world_position.x_m)}
-                cy={sy(pose.world_position.z_m)}
+                cx={sx(currentPosition.x_m)}
+                cy={sy(currentPosition.z_m)}
                 r={0.3} fill="#2563eb"
               />
             </g>
