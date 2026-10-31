@@ -59,7 +59,7 @@ test("boundaries: exactly 60% is not red, 1.5 m is not red, 1.0 m can be green",
   assert.equal(classify({ attempt_count: 10, success_rate: 0.8, valid_error_count: 5, median_horizontal_error_m: 1 }).status, "green");
 });
 
-test("only completed live attempts count", () => {
+test("only completed live attempts count by default", () => {
   const h = computeHealth(key, [
     ...many(10, withError(0.5)),
     attempt({ outcome: "in_progress", latency_ms: null }),
@@ -67,6 +67,13 @@ test("only completed live attempts count", () => {
     attempt({ device_id: "iphone-daksh" }),
   ]);
   assert.equal(h.attempt_count, 10);
+  assert.equal(h.mode, "live");
+});
+
+test("simulation mode counts only simulation attempts and says so", () => {
+  const h = computeHealth(key, [...many(3, { mode: "simulation" }), ...many(5)], "simulation");
+  assert.equal(h.attempt_count, 3);
+  assert.equal(h.mode, "simulation");
 });
 
 test("median latency uses successful attempts only", () => {
@@ -74,7 +81,7 @@ test("median latency uses successful attempts only", () => {
   assert.equal(h.median_latency_ms, 2000);
 });
 
-test("computeAllHealth splits by device", () => {
-  const all = computeAllHealth([...many(3), ...many(2, { device_id: "iphone-daksh" })]);
-  assert.equal(all.length, 2);
+test("computeAllHealth splits by device and skips other modes", () => {
+  const all = computeAllHealth([...many(3), ...many(2, { device_id: "iphone-daksh" }), ...many(4, { mode: "simulation", device_id: "sim" })]);
+  assert.deepEqual(all.map((h) => h.device_id).sort(), ["iphone-daksh", "iphone-sumit"]);
 });

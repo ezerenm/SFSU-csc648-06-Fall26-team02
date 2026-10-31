@@ -6,6 +6,13 @@ import type { Outcome } from "./contracts";
 
 export type HealthStatus = "gray" | "red" | "yellow" | "green";
 
+/**
+ * Which attempts count. §1.14 uses "live" only; "simulation" exists so the pipeline can be
+ * developed and tested on the labeled synthetic seed data. Results always carry their mode.
+ */
+export type HealthMode = "live" | "simulation";
+export const HEALTH_MODES: readonly HealthMode[] = ["live", "simulation"];
+
 /** The attempt fields health needs. Matches localization_attempts columns. */
 export type HealthAttempt = {
   attempt_id: string;
@@ -23,6 +30,7 @@ export type HealthResult = {
   test_point_id: string;
   map_version_id: string;
   device_id: string;
+  mode: HealthMode;
   attempt_ids: string[];
   attempt_count: number; // R14.1
   success_count: number;
@@ -79,16 +87,17 @@ export function classify(m: {
 }
 
 /**
- * Health for ONE test point + device + map. Uses only completed live attempts
- * (in_progress and non-live modes are ignored), as §1.14 requires.
+ * Health for ONE test point + device + map. Uses only completed attempts of the given mode
+ * (in_progress is ignored). The default, "live", is what §1.14 requires.
  */
 export function computeHealth(
   key: { test_point_id: string; map_version_id: string; device_id: string },
   attempts: HealthAttempt[],
+  mode: HealthMode = "live",
 ): HealthResult {
   const used = attempts.filter((a) =>
     a.test_point_id === key.test_point_id && a.map_version_id === key.map_version_id &&
-    a.device_id === key.device_id && a.mode === "live" && a.outcome !== "in_progress");
+    a.device_id === key.device_id && a.mode === mode && a.outcome !== "in_progress");
   const successes = used.filter((a) => a.outcome === "success");
   const latencies = successes.map((a) => a.latency_ms).filter((v): v is number => typeof v === "number");
   const errors = used.filter(isValidError).map((a) => a.horizontal_error_m as number);
@@ -101,6 +110,7 @@ export function computeHealth(
   const { status, reason } = classify(metrics);
   return {
     ...key,
+    mode,
     attempt_ids: used.map((a) => a.attempt_id),
     success_count: successes.length,
     median_latency_ms: median(latencies),
@@ -110,12 +120,13 @@ export function computeHealth(
   };
 }
 
-/** Groups attempts by test point + device + map and computes health for each group. */
-export function computeAllHealth(attempts: HealthAttempt[]): HealthResult[] {
+/** Groups attempts of one mode by test point + device + map and computes health for each group. */
+export function computeAllHealth(attempts: HealthAttempt[], mode: HealthMode = "live"): HealthResult[] {
   const keys = new Map<string, { test_point_id: string; map_version_id: string; device_id: string }>();
   for (const a of attempts) {
+    if (a.mode !== mode) continue;
     const k = `${a.map_version_id}|${a.test_point_id}|${a.device_id}`;
     if (!keys.has(k)) keys.set(k, { test_point_id: a.test_point_id, map_version_id: a.map_version_id, device_id: a.device_id });
   }
-  return [...keys.values()].map((key) => computeHealth(key, attempts));
+  return [...keys.values()].map((key) => computeHealth(key, attempts, mode));
 }
