@@ -15,6 +15,7 @@ const id = (prefix: number, n: number) => `${prefix}0000000-0000-4000-8000-${Str
 const repository: SpatialRepository = {
   graph: async (value) => value === map ? structuredClone(graph) : null,
   attempts: async () => ({ items: [], total: 0 }),
+  healthAttempts: async () => [],
 };
 const get = (path: string) => new Request(`http://localhost${path}`);
 const routeBody: RouteRequest = { map_version_id: map, start_node_id: id(3, 1), destination_id: id(5, 1), profile: "human" };
