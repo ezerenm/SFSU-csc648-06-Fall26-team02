@@ -20,7 +20,7 @@ test("sends the prompt with the key in a header and asks for JSON", async () => 
   const gemini = createGeminiCaller({ apiKey: "test-key", fetchImpl: fakeFetch(answer([{ text: "{}" }]), 200, calls) });
   const result = await gemini("hello");
   assert.deepEqual(result, { text: "{}", model_version: "gemini-test-001" });
-  assert.match(calls[0].url, /models\/gemini-flash-latest:generateContent$/);
+  assert.match(calls[0].url, /models\/gemini-flash-lite-latest:generateContent$/);
   assert.doesNotMatch(calls[0].url, /test-key/);
   assert.equal((calls[0].init.headers as Record<string, string>)["x-goog-api-key"], "test-key");
   const body = JSON.parse(String(calls[0].init.body));
@@ -59,4 +59,35 @@ test("a slow Gemini times out", async () => {
 test("network errors become a failed GeminiError", async () => {
   const broken = (async () => { throw new TypeError("fetch failed"); }) as unknown as typeof fetch;
   await assert.rejects(createGeminiCaller({ apiKey: "k", fetchImpl: broken })("x"), { kind: "failed" });
+});
+
+/** Fake fetch that answers with each status in turn, then 200 with a JSON answer. */
+function flaky(statuses: number[], calls: { count: number }): typeof fetch {
+  return (async () => {
+    const status = statuses[calls.count++];
+    return status
+      ? new Response("{}", { status })
+      : new Response(JSON.stringify(answer([{ text: "{}" }])), { status: 200 });
+  }) as unknown as typeof fetch;
+}
+
+test("retries when Google is busy and succeeds on a later try", async () => {
+  const calls = { count: 0 };
+  const gemini = createGeminiCaller({ apiKey: "k", retryDelayMs: 0, fetchImpl: flaky([503, 429], calls) });
+  assert.equal((await gemini("x")).text, "{}");
+  assert.equal(calls.count, 3);
+});
+
+test("gives up after 3 busy answers", async () => {
+  const calls = { count: 0 };
+  const gemini = createGeminiCaller({ apiKey: "k", retryDelayMs: 0, fetchImpl: flaky([503, 503, 503], calls) });
+  await assert.rejects(gemini("x"), { message: "Gemini returned HTTP 503" });
+  assert.equal(calls.count, 3);
+});
+
+test("does not retry errors that will not fix themselves, like 400", async () => {
+  const calls = { count: 0 };
+  const gemini = createGeminiCaller({ apiKey: "k", retryDelayMs: 0, fetchImpl: flaky([400], calls) });
+  await assert.rejects(gemini("x"), { message: "Gemini returned HTTP 400" });
+  assert.equal(calls.count, 1);
 });

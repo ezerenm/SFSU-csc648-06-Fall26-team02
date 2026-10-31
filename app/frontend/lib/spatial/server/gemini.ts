@@ -6,13 +6,17 @@
 // Safety
 //   - The key goes in the x-goog-api-key header, never in the URL (URLs end up in logs).
 //   - 15-second timeout (Data Definitions 1.15). The caller keeps working without Gemini.
+//   - Retries up to 3 times when Google is busy (429, 500, 503), all inside the same 15 s.
 //   - Errors never include Google's response body, which could echo the prompt.
 //
 // Author: Sumit, Oct 31 2026
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-export const DEFAULT_GEMINI_MODEL = "gemini-flash-latest";
+// Lite: answers in ~2 s. The full flash model thought for over 15 s on this prompt (Oct 31 test).
+export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 export const GEMINI_TIMEOUT_MS = 15_000;
+const MAX_TRIES = 3;
+const RETRY_STATUSES = new Set([429, 500, 503]); // busy or temporary errors worth trying again
 
 /** What one Gemini call returns. model_version is the exact model Google used, for the record. */
 export type GeminiResult = { text: string; model_version: string };
@@ -33,9 +37,10 @@ type GeminiResponse = {
 /**
  * Creates a function that sends one prompt to Gemini and asks for a JSON reply.
  * @param options.apiKey Gemini API key (server only)
- * @param options.model model name, default "gemini-flash-latest"
+ * @param options.model model name, default "gemini-flash-lite-latest"
  * @param options.timeoutMs give up after this many ms, default 15000
  * @param options.fetchImpl fetch to use; tests pass a fake one
+ * @param options.retryDelayMs wait before the 2nd try (doubles for the 3rd), default 500
  * @returns a caller that resolves with the reply text, or throws GeminiError
  */
 export function createGeminiCaller(options: {
@@ -43,15 +48,17 @@ export function createGeminiCaller(options: {
   model?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
+  retryDelayMs?: number;
 }): GeminiCaller {
   const model = options.model ?? DEFAULT_GEMINI_MODEL;
   const timeoutMs = options.timeoutMs ?? GEMINI_TIMEOUT_MS;
   const fetchImpl = options.fetchImpl ?? fetch;
+  const retryDelayMs = options.retryDelayMs ?? 500;
 
-  return async (prompt) => {
-    let response: Response;
+  /** One HTTP request. Turns network problems and the overall deadline into GeminiError. */
+  async function send(prompt: string, deadline: AbortSignal): Promise<Response> {
     try {
-      response = await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
+      return await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": options.apiKey },
         body: JSON.stringify({
@@ -59,7 +66,7 @@ export function createGeminiCaller(options: {
           // Low temperature: we want the same facts explained the same way each time.
           generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
         }),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: deadline,
         cache: "no-store",
       });
     } catch (error) {
@@ -68,6 +75,16 @@ export function createGeminiCaller(options: {
         throw new GeminiError("timed_out", `Gemini did not answer within ${timeoutMs} ms`);
       }
       throw new GeminiError("failed", "Could not reach Gemini");
+    }
+  }
+
+  return async (prompt) => {
+    // One deadline for all tries, so retries never push past the 15 s limit.
+    const deadline = AbortSignal.timeout(timeoutMs);
+    let response = await send(prompt, deadline);
+    for (let tries = 1; !response.ok && RETRY_STATUSES.has(response.status) && tries < MAX_TRIES; tries++) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * tries));
+      response = await send(prompt, deadline);
     }
     if (!response.ok) throw new GeminiError("failed", `Gemini returned HTTP ${response.status}`);
 
