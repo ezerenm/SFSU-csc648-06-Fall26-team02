@@ -16,7 +16,7 @@
 import { HEALTH_RULES, type HealthResult, type HealthStatus } from "./health";
 
 /** Bump when the prompt wording changes, so stored summaries can be traced to a prompt. */
-export const PROMPT_VERSION = "health-summary-v1";
+export const PROMPT_VERSION = "health-summary-v2";
 
 const MAX_OBSERVATIONS = 6;
 const MAX_SUGGESTIONS = 3;
@@ -116,6 +116,9 @@ export function buildSummaryPrompt(facts: HealthFacts): string {
     "- Use ONLY numbers that appear in FACTS. Do not calculate new numbers or percentages.",
     "- Refer to test points by their exact test_point name from FACTS.",
     "- Observations state what the facts show. Suggestions are next steps, clearly separate.",
+    "- Group test points that share the same status and reason into ONE sentence. Never repeat a sentence per point.",
+    "- Point out what differs between points, e.g. which ones had no successes or the slowest localization.",
+    "- Each suggestion must be different. Name the test points it applies to.",
     "- Plain words, no jargon. Each item is one sentence under 40 words.",
     `- At most ${MAX_OBSERVATIONS} observations and ${MAX_SUGGESTIONS} suggestions.`,
     facts.mode === "simulation"

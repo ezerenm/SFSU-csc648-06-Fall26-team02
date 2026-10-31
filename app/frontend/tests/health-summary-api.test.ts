@@ -53,7 +53,7 @@ test("a good Gemini answer is completed and keeps only checked sentences", async
   const body = await (await api(gemini).healthSummary(post())).json();
   assert.equal(body.status, "completed");
   assert.equal(body.model_version, "gemini-test-001");
-  assert.equal(body.prompt_version, "health-summary-v1");
+  assert.equal(body.prompt_version, "health-summary-v2");
   assert.equal(body.observations.length, 1);
   assert.equal(body.rejected_count, 1);
 });

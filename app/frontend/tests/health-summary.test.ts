@@ -34,6 +34,7 @@ test("prompt contains the facts and the simulated-data warning only in simulatio
   assert.match(buildSummaryPrompt(facts), /"test_point":"TP1 Door"/);
   assert.doesNotMatch(buildSummaryPrompt(facts), /SIMULATED/);
   assert.match(buildSummaryPrompt(buildHealthFacts(points, "simulation")), /SIMULATED/);
+  assert.match(buildSummaryPrompt(facts), /Group test points/);
 });
 
 test("numbers from the facts are accepted, including rounded and percent forms", () => {
