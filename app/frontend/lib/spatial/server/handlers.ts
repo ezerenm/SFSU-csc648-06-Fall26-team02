@@ -2,7 +2,8 @@ import type { GraphResponse, RouteResponse, RoutingFunction } from "../contracts
 import { ApiError, respond } from "./errors";
 import type { SpatialRepository } from "./repository";
 import { validateRoutingResult } from "./routing";
-import { attemptFilters, query, routeRequest, uuid } from "./validation";
+import { attemptFilters, invalid, query, routeRequest, uuid } from "./validation";
+import { computeAllHealth, HEALTH_MODES, HEALTH_RULES, type HealthMode } from "../health";
 
 async function visibleGraph(repository: SpatialRepository, id: string): Promise<GraphResponse> {
   const graph = await repository.graph(id);
@@ -26,6 +27,26 @@ export function createHandlers(repository: () => SpatialRepository, route: Routi
       }
       const result = await store.attempts(filters);
       return { ...result, limit: filters.limit, offset: filters.offset, data_origin: "synthetic" };
+    }),
+    /** GET /api/health?map_version_id=…[&mode=live|simulation] — R14 health per evaluation test point. */
+    health: (request: Request) => respond(async () => {
+      const params = query(request, ["map_version_id", "mode"]);
+      const id = uuid(params.get("map_version_id"), "map_version_id");
+      const mode = (params.get("mode") ?? "live") as HealthMode;
+      if (!HEALTH_MODES.includes(mode)) invalid("mode must be live or simulation.");
+      const store = repository();
+      const graph = await visibleGraph(store, id);
+      const results = computeAllHealth(await store.healthAttempts(id, mode), mode);
+      const points = graph.test_points
+        .filter((point) => point.purpose === "evaluation")
+        .map((point) => ({
+          test_point_id: point.test_point_id,
+          label: point.label,
+          is_synthetic: point.is_synthetic,
+          // One result per device. Empty = no attempts yet, which the UI shows as gray.
+          results: results.filter((result) => result.test_point_id === point.test_point_id),
+        }));
+      return { map_version_id: id, mode, rules: HEALTH_RULES, calculated_at: new Date().toISOString(), points };
     }),
     route: (request: Request) => respond(async (): Promise<RouteResponse> => {
       const input = await routeRequest(request);
