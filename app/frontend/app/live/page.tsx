@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 // react memory and sice tasks
 
-import type { GraphResponse, RouteRequest, RouteResponse } from "@/lib/spatial/contracts";
+import type { RouteRequest, RouteResponse } from "@/lib/spatial/contracts";
 // the api data shapes
 
 import { ARRIVED_M, distance, pickStartNode, routePolyline, type Xz } from "@/lib/spatial/liveRoute";
@@ -34,6 +34,10 @@ import LiveMap from "@/components/live/LiveMap";
 
 import TrackingChip from "@/components/live/TrackingChip";
 // the status chip
+import { useGraph } from "@/components/live/useGraph";
+// R9 graph that refreshes every 3 s so closures reroute
+import { pathStateKey } from "@/lib/spatial/pathState";
+// R9 fingerprint of open/closed and robot access
 
 import RoutePlanner from "@/components/viewer/RoutePlanner";
 // the existing 3d viewer with its route, used for the 3d tab
@@ -66,12 +70,10 @@ export default function LivePage() {
 
   // Memory ---------------------------
 
-  const [graph, setGraph] = useState<GraphResponse | null>(null);
-  // the map from /api/graph
+  const { graph, graphError, lastChange } = useGraph(MAP_VERSION_ID);
+  // R9 the map from /api/graph, refreshed every 3 s
   // null while loading
 
-  const [graphError, setGraphError] = useState<string | null>(null);
-  // error if the map did not load
 
   const [viewMode, setViewMode] = useState<ViewMode>("2d");
   // 2d live map or 3d viewer
@@ -95,47 +97,9 @@ export default function LivePage() {
 
   // Memory end -----------------------
 
-  // Loading the graph ----------------
+  // Loading the graph: moved to useGraph (R9)
 
-  useEffect(() => {
-    // runs when the page opens
 
-    const controller = new AbortController();
-    // allows us to cancel the request if the page closes
-
-    fetch("/api/graph?map_version_id=" + MAP_VERSION_ID, { signal: controller.signal, cache: "no-store"})
-    .then(async (response) => {
-      const body = await response.json();
-      // reading the answer
-
-      if (!response.ok) {
-
-        throw new Error(body?.error?.message ?? "Graph request failed (" + response.status + ")");
-        // server says no
-      }
-
-      setGraph(body as GraphResponse);
-      // saving the map
-
-    })
-    .catch((error: Error) => {
-
-      if(error.name !== "AbortError") {
-
-        setGraphError(error.message);
-
-      }
-      // show the error unless it was cancelled on purpose
-
-    });
-
-    return () => controller.abort();
-    // clean 
-    // cancel if the page closes
-
-  }, []);
-
-  // Loading the graph end ------------
 
   // The phone we navigate with -------
 
@@ -271,17 +235,26 @@ export default function LivePage() {
   const routeKey = startId && destinationId ? startId + "|" + destinationId : null;
   // a key for the start to this destination
 
+  const pathKey = graph ? pathStateKey(graph) : "";
+  // R9 changes when a segment closes, reopens or gets robot restricted
+
+  const requestKey = routeKey ? routeKey + "#" + pathKey : null;
+  // R9 ask again when the start, destination or path state changes
+
   useEffect(() => {
     // asks /api/route everytime the start or the destination changes
 
-    if (!routeKey) {
+    if (!requestKey) {
 
       return;
 
     }
     // nothing to ask for
 
-    const [startNodeId, routeDestinationId] = routeKey.split("|");
+    const key = requestKey.split("#")[0];
+    // the start|destination part, so the old route stays on screen until the new one arrives
+
+    const [startNodeId, routeDestinationId] = key.split("|");
     // split the key back into its two ids
 
     const controller = new AbortController();
@@ -303,13 +276,13 @@ export default function LivePage() {
           throw new Error(body?.error?.message ?? "Route request failed (" + response.status + ")");
     
         }
-        setRouteState({ key: routeKey, route: body as RouteResponse, error: null });
+        setRouteState({ key, route: body as RouteResponse, error: null });
         // saving the route
 
       })
       .catch((error: Error) => {
         if (error.name !== "AbortError") {
-          setRouteState({ key: routeKey, route: null, error: error.message });
+          setRouteState({ key, route: null, error: error.message });
         
         }
         // saving the error
@@ -317,7 +290,7 @@ export default function LivePage() {
 
       return () => controller.abort();
 
-  }, [routeKey]);
+  }, [requestKey]);
 
   const routeResult = routeState && routeState.key === routeKey ? routeState : null;
   // only use the answer if it is for the start or destination we have right now
@@ -337,6 +310,9 @@ export default function LivePage() {
   const arrived = trackingColor === "green" && livePosition !== null && destinationNode !== null && 
     distance(destinationNode.position, livePosition) <= ARRIVED_M;
     // arrive = accurate position within one meter of the destination
+
+  const rerouteNotice = lastChange && lastChange.messages.length > 0 && nowMs - lastChange.at < 20000 ? lastChange.messages.join(", ") : null;
+  // R9 banner for 20 s after a path changes, long enough to point at in a demo
 
   const segmentLength = (segmentId: string) => segments.find((segment) => segment.segment_id === segmentId)?.distance_m ?? 0;
   // length of just one step
@@ -494,12 +470,15 @@ export default function LivePage() {
                                   {startChoice === AUTO && liveStartProblem && <p className="font-medium text-yellow-300">{liveStartProblem}</p>}
                                   {/* R6.3 and R6.4 message */}
 
+                                  {rerouteNotice && <p role="status" className="font-medium text-orange-300">Path changed: {rerouteNotice}.{destination ? " Route recalculated." : ""}</p>}
+                                  {/* R9 reroute alert */}
+
                                   {!destination && <p className="text-purple-200">Select a destination to see the shortest route.</p>}
                                   {destination && startId && !routeResult && <p className="text-purple-200">Finding route...</p>}
                                   {routeResult?.error && <p role="alert" className="font-medium text-red-300">Could not calculate a route: {routeResult.error}</p>}
 
                                   {arrived && destination && <p className="font-semibold text-lime-300">You have arrived at {destination.name}.</p>}
-                                  {route?.status === "unreachable" && destination && <p className="font-medium text-red-300">No permitted route from {nodeName(route.start_node_id)} to {destination.name}.</p>}
+                                  {route?.status === "unreachable" && destination && <p className="font-medium text-red-300">Unreachable: no permitted route from {nodeName(route.start_node_id)} to {destination.name}.</p>}
 
                                   {route?.status === "valid" && !arrived && destination && (
                                       route.steps.length === 0 ? <p className="font-medium text-yellow-300">The start and destination are the same ({destination.name}). No route needed.</p>
