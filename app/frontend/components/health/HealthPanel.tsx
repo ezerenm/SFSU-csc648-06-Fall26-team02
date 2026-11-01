@@ -29,7 +29,12 @@ type Summary = {
   observations: { text: string }[];
   suggestions: string[];
   rejected_count: number;
+  message?: string; // only for "error": the server's or browser's reason
 };
+
+/** A summary with nothing to show, used when the request itself fails. */
+const failedSummary = (message: string): Summary =>
+  ({ status: "error", message, model_version: null, observations: [], suggestions: [], rejected_count: 0 });
 
 export default function HealthPanel() {
   const [map, setMap] = useState<(typeof MAPS)[number]>(MAPS[1]);
@@ -61,9 +66,13 @@ export default function HealthPanel() {
     setAsking(true); setSummary(null);
     try {
       const res = await fetch(`/api/health/summary?${query}`, { method: "POST" });
-      setSummary(await res.json());
+      const body = await res.json().catch(() => null);
+      // Errors (400, 404, 503) come back as { error: { message } } with no status.
+      if (!res.ok || typeof body?.status !== "string") {
+        setSummary(failedSummary(body?.error?.message ?? `Request failed (${res.status}).`));
+      } else setSummary(body);
     } catch {
-      setSummary({ status: "failed", model_version: null, observations: [], suggestions: [], rejected_count: 0 });
+      setSummary(failedSummary("Could not reach the server. Check your connection and try again."));
     } finally { setAsking(false); }
   }
 
@@ -123,7 +132,9 @@ export default function HealthPanel() {
               {asking ? "Asking Gemini…" : "Explain with AI"}
             </button>
           </div>
-          {summary && summary.status !== "completed" && <p className="text-amber-700">{SUMMARY_PROBLEM[summary.status]}</p>}
+          {summary && summary.status !== "completed" && (
+            <p className="text-amber-700">{SUMMARY_PROBLEM[summary.status] ?? summary.message ?? "Something went wrong. Try again."}</p>
+          )}
           {summary?.status === "completed" && (
             <>
               <ul className="list-disc space-y-1 pl-5">{summary.observations.map((o, i) => <li key={i}>{o.text}</li>)}</ul>
