@@ -131,6 +131,7 @@ export default function Hero() {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link href="/live" className={`${button} bg-[#1f5bff] text-white hover:bg-[#1648cc]`}>See live position</Link>
             <Link href="/viewer" className={`${button} border border-[#8fa3b8] text-[#101828] hover:bg-white dark:border-[#4b6485] dark:text-[#e6edf6] dark:hover:bg-[#12203a]`}>Open 3D viewer</Link>
+            <Link href="/health" className={`${button} border border-[#8fa3b8] text-[#101828] hover:bg-white dark:border-[#4b6485] dark:text-[#e6edf6] dark:hover:bg-[#12203a]`}>Localization health</Link>
             <a href="#explore" className="px-2 py-2.5 text-sm font-semibold text-[#101828] underline underline-offset-4 dark:text-[#e6edf6]">Browse the data</a>
           </div>
           <p className="mt-8 text-sm text-[#44546a] dark:text-[#9fb0c6]">

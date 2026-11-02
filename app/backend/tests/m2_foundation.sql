@@ -74,7 +74,9 @@ select pg_temp.expect_error($q$update public.localization_attempts set latency_m
 select pg_temp.expect_error($q$update public.localization_attempts set ended_at = started_at + interval '1 second' where outcome = 'timeout'$q$, '23514', 'timeout cannot finish before 30 seconds');
 select pg_temp.expect_error($q$update public.localization_attempts set error_is_valid = true where data_origin = 'synthetic'$q$, '23514', 'synthetic rows cannot claim valid measured error');
 select pg_temp.expect_error($q$update public.localization_attempts set mode = 'live' where data_origin = 'synthetic'$q$, '23514', 'synthetic rows cannot claim live mode');
-select pg_temp.expect_error($q$update public.localization_attempts set valid_pose_sample_id = gen_random_uuid()$q$, '23514', 'deferred pose references stay null');
+select pg_temp.expect_error($q$update public.localization_attempts set valid_pose_sample_id = gen_random_uuid()$q$,
+  case when exists (select 1 from pg_constraint where conname = 'attempts_valid_pose_same_attempt')
+    then '23503' else '23514' end, 'invalid pose reference rejected before and after M3');
 select pg_temp.expect_error($q$delete from public.graph_nodes where node_id = '30000000-0000-4000-8000-000000000001'$q$, '23503', 'referenced nodes cannot be deleted');
 
 update public.path_segments set availability = 'closed' where segment_id = '40000000-0000-4000-8000-000000000002';
@@ -88,8 +90,14 @@ select pg_temp.assert_true((select bool_and(not has_table_privilege(current_user
 select pg_temp.assert_true((select count(*) = 1 from public.sites), 'anonymous sees only public demo sites');
 select pg_temp.assert_true((select count(*) = 1 from public.map_versions), 'anonymous sees only published demo maps');
 select pg_temp.assert_true((select count(*) = 8 from public.graph_nodes), 'private and future-revision nodes hidden');
-select pg_temp.assert_true((select count(*) = 5 from public.test_points), 'real test points hidden');
-select pg_temp.assert_true((select count(*) = 10 from public.localization_attempts), 'live attempts hidden');
+select pg_temp.assert_true((select count(*) = case when exists
+  (select 1 from pg_policies where schemaname = 'public' and tablename = 'test_points'
+    and policyname = 'm3_public_demo_real_points') then 6 else 5 end
+  from public.test_points), 'test-point visibility matches installed policies');
+select pg_temp.assert_true((select count(*) = case when exists
+  (select 1 from pg_policies where schemaname = 'public' and tablename = 'localization_attempts'
+    and policyname = 'm3_public_demo_live_attempts') then 11 else 10 end
+  from public.localization_attempts), 'attempt visibility matches installed policies');
 select pg_temp.assert_true(jsonb_array_length(public.m2_get_graph('20000000-0000-4000-8000-000000000001')->'nodes') = 8, 'graph RPC returns current nodes under RLS');
 select pg_temp.assert_true(jsonb_array_length(public.m2_get_graph('20000000-0000-4000-8000-000000000001')->'segments') = 10, 'graph RPC returns segments under RLS');
 select pg_temp.assert_true(public.m2_get_graph('20000000-0000-4000-8000-000000000002') is null, 'graph RPC hides private map');
@@ -103,7 +111,10 @@ set local role authenticated;
 select pg_temp.assert_true((select bool_and(not has_table_privilege(current_user, 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE'))
   from unnest(array['sites','map_versions','graph_nodes','path_segments','destinations','test_points','localization_attempts']) t),
   'all seven tables deny authenticated write privileges');
-select pg_temp.assert_true((select count(*) = 10 from public.localization_attempts), 'login alone does not expose live records');
+select pg_temp.assert_true((select count(*) = case when exists
+  (select 1 from pg_policies where schemaname = 'public' and tablename = 'localization_attempts'
+    and policyname = 'm3_public_demo_live_attempts') then 11 else 10 end
+  from public.localization_attempts), 'login adds no access beyond public policies');
 select pg_temp.expect_error($q$update public.path_segments set availability = 'closed'$q$, '42501', 'login alone does not grant writes');
 reset role;
 rollback;
