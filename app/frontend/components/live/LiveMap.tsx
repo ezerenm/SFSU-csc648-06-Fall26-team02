@@ -34,6 +34,9 @@ const ROUTE_COLOR = "deepskyblue";
 // blue like /viewer
 // deep sky blue to pop against purple SFSU background
 
+const ROBOT_ROUTE_COLOR = "orange";
+// R9.2 the simulated robot route, same orange as the robot dot
+
 const NODE_COLOR = "white";
 // node
 
@@ -62,6 +65,9 @@ type LiveMapProps = {
 
     routePoints?: Xz[];
     // blue route line
+
+    robotRoutePoints?: Xz[];
+    // R9.2 orange dashed line for the simulated robot route
 
     destinationNode?: GraphNode | null;
     // gold ring around the destination
@@ -104,7 +110,7 @@ function getDeviceColor(deviceType: DeviceType): string {
 
 // The Map --------------------------------------------------------------------
 
-export default function LiveMap({ graph, phones, nowMs, routePoints, destinationNode, attachLine, highlightedDeviceId }: LiveMapProps ) {
+export default function LiveMap({ graph, phones, nowMs, routePoints, robotRoutePoints, destinationNode, attachLine, highlightedDeviceId }: LiveMapProps ) {
 
     const nodes = graph.nodes;
     // every node on the map
@@ -199,6 +205,16 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, destination
                 />
                 // blue route line
                 
+            )}
+
+            {robotRoutePoints && robotRoutePoints.length > 1 && (
+
+                <polyline
+                    points={robotRoutePoints.map((point) => toScreenX(point.x_m) + "," + toScreenY(point.z_m)).join(" ")}
+                    fill="none" stroke={ROBOT_ROUTE_COLOR} strokeWidth={0.18} strokeDasharray="0.4 0.25" strokeLinecap="round" strokeLinejoin="round"
+                />
+                // R9.2 orange dashed robot route, drawn on top so both routes show when they share a path
+
             )}
 
             {nodes.map((node) => (
