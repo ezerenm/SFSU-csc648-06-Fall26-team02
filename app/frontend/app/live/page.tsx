@@ -14,7 +14,7 @@ import { ARRIVED_M, distance, pickStartNode, routePolyline, type Xz } from "@/li
 import { formatMeters, placeNamer, placesFor } from "@/lib/spatial/places";
 // place names and formatting
 
-import { canStartFromLivePosition, getTrackingColor, getTrackingLabel } from "@/lib/spatial/trackingStatus";
+import { canStartFromLivePosition, getChipLook, getTrackingColor } from "@/lib/spatial/trackingStatus";
 // R4.1 status chip color and R6.4 live start rule
 
 import { checkLiveStart, findNearestSegment, type SegmentAttachment } from "@/lib/spatial/segmentAttach";
@@ -161,6 +161,9 @@ export default function LivePage() {
   const trackingColor = getTrackingColor(navigationPhone === null ? null : navigationPhone.latestMessage, nowMs);
   // R4.1 green, yellow, red, or gray
 
+  const chipLook = getChipLook(navigationPhone === null ? null : navigationPhone.latestMessage, navigationPhone === null ? null : navigationPhone.localizingSince, nowMs);
+  // chips color and words
+
   let livePosition: Xz | null = null;
   // where the phone is on the floor
 
@@ -237,7 +240,7 @@ export default function LivePage() {
     if (!canStartFromLivePosition(trackingColor)) {
       // R6.4 status chip isnt green
 
-      liveStartProblem = "A live start needs an accurate position (green). The phone currently says: " + getTrackingLabel(trackingColor);
+      liveStartProblem = "A live start needs an accurate position (green). The phone currently says: " + chipLook.label;
 
     } else if (livePosition === null) {
 
@@ -399,7 +402,7 @@ export default function LivePage() {
 
             <div className="my-3 flex flex-wrap items-center justify-between gap-3">
 
-                <TrackingChip trackingColor={trackingColor} extraText={chipText} />
+                <TrackingChip trackingColor={chipLook.trackingColor} label={chipLook.label} extraText={chipText} />
                 {/* R4.1 status chip */}
 
                 <div className="inline-flex rounded-md border border-white/20 text-sm" role="group" aria-label="Map view">
@@ -532,7 +535,7 @@ export default function LivePage() {
                                       {listPhones(phones).map((phone) => (
                                           <li key={phone.deviceId} className="flex flex-wrap items-center gap-2">
                                               <span className="w-40 font-medium">{getDeviceName(getDeviceType(phone.deviceId))}</span>
-                                              <TrackingChip trackingColor={getTrackingColor(phone.latestMessage, nowMs)} />
+                                              <TrackingChip trackingColor={getChipLook(phone.latestMessage, phone.localizingSince, nowMs).trackingColor} label={getChipLook(phone.latestMessage, phone.localizingSince, nowMs).label} />
                                               <span className="text-xs text-purple-300">{phone.deviceId}</span>
 
                                           </li>

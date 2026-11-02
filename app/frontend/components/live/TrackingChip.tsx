@@ -17,6 +17,8 @@ type TrackingChipProps = {
     trackingColor: TrackingColor;
     // which color to display
 
+    label?: string;
+
     extraText?: string;
 
 };
@@ -72,8 +74,18 @@ function getDotClasses(trackingColor: TrackingColor): string {
 
 // The Chip -------------------------------------------------------------------
 
-export default function TrackingChip({ trackingColor, extraText }: TrackingChipProps) {
+export default function TrackingChip({ trackingColor, label, extraText }: TrackingChipProps) {
     // making the chip
+
+    let shownLabel = getTrackingLabel(trackingColor);
+    // the normal words for this color
+
+    if (label !== undefined) {
+        // the page gave us its own words
+
+        shownLabel = label;
+        // use instead
+    }
 
     return (
 
@@ -86,7 +98,7 @@ export default function TrackingChip({ trackingColor, extraText }: TrackingChipP
             <span className={"h-2.5 w-2.5 rounded-full " + getDotClasses(trackingColor)} aria-hidden="true" />
             {/* small colored circle */}
 
-            {getTrackingLabel(trackingColor)}
+            {shownLabel}
             {/* Either Accurate, Finding Position..., Position lost, or There is no data */}
 
             {extraText && <span className="font-normal opacity-80">· {extraText}</span>}

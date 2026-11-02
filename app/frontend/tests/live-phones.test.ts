@@ -139,4 +139,26 @@ test("pickNavigationPhone never picks the robot phone", () => {
 
 })
 
+test("localizingSince remembers when localizing started and resets", () => {
+
+    let phones: PhonesByDevice = {};
+
+    phones = addPhoneMessage(phones, makeMessage("phone1", 1, "valid", true));
+
+    assert.equal(phones["phone1"].localizingSince, null);
+
+    const firstLocalizing = makeMessage("phone1", 2, "localizing", false);
+
+    phones = addPhoneMessage(phones, firstLocalizing);
+
+    phones = addPhoneMessage(phones, makeMessage("phone1", 3, "localizing", false));
+
+    assert.equal(phones["phone1"].localizingSince, firstLocalizing.received_at);
+
+    phones = addPhoneMessage(phones, makeMessage("phone1", 4, "valid", true));
+
+    assert.equal(phones["phone1"].localizingSince, null);
+
+})
+
 // Test end -------------------------------------------------------------------

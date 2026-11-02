@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import { test } from "node:test";
 
-import { canStartFromLivePosition, getTrackingColor, getTrackingLabel  } from "../lib/spatial/trackingStatus";
+import { canStartFromLivePosition, getChipLook, getTrackingColor, getTrackingLabel  } from "../lib/spatial/trackingStatus";
 
 const currentMs = Date.parse("2026-10-28T12:00:10Z");
 
@@ -51,5 +51,19 @@ test("R6.4 labels + live start", () => {
     assert.equal(canStartFromLivePosition("red"), false);
 
     assert.equal(canStartFromLivePosition("gray"), false);
+
+})
+
+test("R3.4 localizing for 30 seconds or more means red Time Out", () => {
+
+    const freshLocalizing = { tracking_status: "localizing", received_at: new Date(currentMs - 1000).toISOString() };
+
+    const since31 = new Date(currentMs - 31000).toISOString();
+
+    const since10 = new Date(currentMs - 10000).toISOString();
+
+    assert.deepEqual(getChipLook(freshLocalizing, since31, currentMs), { trackingColor: "red", label: "Timed out, try again" });
+
+    assert.deepEqual(getChipLook(freshLocalizing, since10, currentMs), { trackingColor: "yellow", label: "Finding position..." });
 
 })
