@@ -13,16 +13,18 @@ apply the migration to the shared Supabase database; deployment is a separate st
 | `robot_commands` | Commands are `start`, `pause`, `resume`, `reset`, or `set_destination`. Only the last requires a destination, and it must be on the same map. Status is `pending`, `applied`, or `rejected`; an optional `reason` is allowed only when rejected. `issued_at` records creation and `updated_at` changes on updates. |
 | `pose_samples` | Adds nullable `session_id`; `provider_pose` and `world_position` may be null for lost/localizing samples. A `valid` pose requires both. Existing rows remain unchanged. |
 | `localization_attempts` | Existing outcome values are `in_progress`, `success`, `timeout`, `tracking_loss`, `network_error`, `map_mismatch`, `cancelled`, and `other_failure`. Existing failures already require `failure_reason`. The reserved `session_id` becomes a same-map foreign key. Horizontal error may be stored; `error_is_valid` requires a live success, a real valid pose from the same attempt, and a verified test-point reference. |
+| `test_points` and `m2_get_graph` | Real test points on published public-demo maps become readable and appear in the graph response, so the existing health API can list them. Private-site points remain hidden. |
 
 The migration enables RLS on the new tables and grants server-side `service_role`
 access. It intentionally grants no browser access to those tables yet. It adds
-anonymous read access to live localization attempts only on published public-demo
-maps for the planned health view. The M2 synthetic-attempt policy remains in place;
-the current M2 search API still filters to synthetic attempts. Account membership,
+anonymous read access to live localization attempts and real test points only on
+published public-demo maps for the health view. The M2 synthetic-attempt policy
+remains in place; the current M2 search API still filters to synthetic attempts. Account membership,
 operator policies, segment state APIs, and Realtime publication need separate
 reviewed work. The current M2 `pose_samples` select policy is unchanged.
 
 The `routes` table is not present yet, so `simulated_agents` does not include a
 `route_id` column. No command execution, attempt-ingestion API, or simulator is
-implemented by this schema migration. Session creation, `/api/poses` accepting
-`session_id`, and a dedicated health read API remain follow-ups.
+implemented by this schema migration. Session creation and `/api/poses` accepting
+`session_id` remain follow-ups. The health read API is already in `dev` and uses
+the graph RPC and attempt visibility supplied by this migration.

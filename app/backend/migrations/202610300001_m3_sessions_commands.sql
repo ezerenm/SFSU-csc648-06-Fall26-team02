@@ -138,6 +138,49 @@ create policy m3_public_demo_live_attempts on public.localization_attempts
     where m.map_version_id = localization_attempts.map_version_id
       and m.publication_state = 'published' and s.is_public_demo));
 
+-- R14 health needs real evaluation points on the same public demo maps. The
+-- existing M2 synthetic-point policy remains available for sample data.
+create policy m3_public_demo_real_points on public.test_points
+  for select to anon, authenticated
+  using (not is_synthetic and exists (
+    select 1 from public.map_versions m
+    join public.sites s on s.site_id = m.site_id
+    where m.map_version_id = test_points.map_version_id
+      and m.publication_state = 'published' and s.is_public_demo));
+
+-- M2's graph RPC filtered out real points even when RLS made them visible.
+-- Replace only the function body; the map, graph, and destination contract stays
+-- the same, and invoker rights continue to enforce the RLS policies above.
+create or replace function public.m2_get_graph(requested_map_version_id uuid) returns jsonb
+language sql stable security invoker set search_path = '' as $$
+  select jsonb_build_object(
+    'site', jsonb_build_object('site_id', s.site_id, 'name', s.name, 'is_test_site', s.is_test_site),
+    'map_version', jsonb_build_object('map_version_id', m.map_version_id, 'site_id', m.site_id,
+      'version_label', m.version_label, 'world_frame', m.world_frame,
+      'current_graph_revision', m.current_graph_revision, 'current_path_state_revision', m.current_path_state_revision),
+    'nodes', coalesce((select jsonb_agg(jsonb_build_object('node_id', n.node_id,
+      'map_version_id', n.map_version_id, 'graph_revision', n.graph_revision, 'label', n.label, 'position', n.position)
+      order by n.label, n.node_id) from public.graph_nodes n where n.map_version_id = m.map_version_id
+      and n.graph_revision = m.current_graph_revision), '[]'::jsonb),
+    'segments', coalesce((select jsonb_agg(jsonb_build_object('segment_id', e.segment_id,
+      'map_version_id', e.map_version_id, 'graph_revision', e.graph_revision, 'label', e.label,
+      'start_node_id', e.start_node_id, 'end_node_id', e.end_node_id, 'direction', e.direction,
+      'distance_m', e.distance_m, 'geometry', e.geometry, 'availability', e.availability,
+      'robot_access', e.robot_access, 'last_state_revision', e.last_state_revision)
+      order by e.label, e.segment_id) from public.path_segments e where e.map_version_id = m.map_version_id
+      and e.graph_revision = m.current_graph_revision), '[]'::jsonb),
+    'destinations', coalesce((select jsonb_agg(jsonb_build_object('destination_id', d.destination_id,
+      'site_id', d.site_id, 'map_version_id', d.map_version_id, 'graph_revision', d.graph_revision,
+      'node_id', d.node_id, 'name', d.name, 'description', d.description, 'is_active', d.is_active)
+      order by d.name, d.destination_id) from public.destinations d where d.map_version_id = m.map_version_id
+      and d.graph_revision = m.current_graph_revision and d.is_active), '[]'::jsonb),
+    'test_points', coalesce((select jsonb_agg(jsonb_build_object('test_point_id', t.test_point_id,
+      'map_version_id', t.map_version_id, 'label', t.label, 'purpose', t.purpose, 'is_synthetic', t.is_synthetic)
+      order by t.label, t.test_point_id) from public.test_points t where t.map_version_id = m.map_version_id), '[]'::jsonb)
+  ) from public.map_versions m join public.sites s on s.site_id = m.site_id
+    where m.map_version_id = requested_map_version_id and m.publication_state = 'published' and s.is_public_demo;
+$$;
+
 create table public.simulated_agents (
   agent_id uuid primary key default gen_random_uuid(),
   session_id uuid not null unique,

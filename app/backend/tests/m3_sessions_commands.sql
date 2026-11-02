@@ -154,6 +154,18 @@ values ('70000000-0000-4000-8000-000000000013',
   'live','live_sdk','local fixture','+Z',now(),'in_progress');
 
 set local role anon;
+select pg_temp.assert_true((select count(*) = 1 from public.test_points
+  where test_point_id = '60000000-0000-4000-8000-000000000007'),
+  'anonymous read sees real point on public demo map');
+select pg_temp.assert_true((select count(*) = 0 from public.test_points
+  where test_point_id = '60000000-0000-4000-8000-000000000008'),
+  'anonymous read hides private-site real point');
+select pg_temp.assert_true((select count(*) = 1
+  from jsonb_array_elements(public.m2_get_graph('20000000-0000-4000-8000-000000000001')->'test_points') p
+  where p->>'test_point_id' = '60000000-0000-4000-8000-000000000007'),
+  'graph RPC includes real public-demo point for health');
+select pg_temp.assert_true(public.m2_get_graph('20000000-0000-4000-8000-000000000002') is null,
+  'graph RPC hides private map and its points');
 select pg_temp.assert_true((select count(*) = 1 from public.localization_attempts
   where attempt_id = '70000000-0000-4000-8000-000000000012'),
   'anonymous health read sees live attempt on public demo map');
