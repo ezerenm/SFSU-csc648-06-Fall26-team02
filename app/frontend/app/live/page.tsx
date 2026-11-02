@@ -515,6 +515,8 @@ export default function LivePage() {
 
                                 <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "red" }} />Closed path</span>
 
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "#f472b6" }} />Humans only (no robots)</span>
+
                                 <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Route</span>
 
                                 <span><span className="mr-1.5 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: "orange" }} />Robot route</span>

@@ -30,6 +30,9 @@ const OPEN_PATH_COLOR = "lime";
 const CLOSED_PATH_COLOR = "red";
 // red like /viewer
 
+const HUMANS_ONLY_COLOR = "#f472b6";
+// R17.1 pink when a path is open but restricted for robots (humans only)
+
 const ROUTE_COLOR = "deepskyblue";
 // blue like /viewer
 // deep sky blue to pop against purple SFSU background
@@ -189,10 +192,11 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, robotRouteP
                     key={segment.segment_id}
                     points={segment.geometry.map((point) => toScreenX(point.x_m) + "," +
                     toScreenY(point.z_m)).join(" ")}
-                    fill="none" stroke={segment.availability === "open" ? OPEN_PATH_COLOR : CLOSED_PATH_COLOR}
+                    fill="none" stroke={segment.availability !== "open" ? CLOSED_PATH_COLOR : segment.robot_access === "restricted" ? HUMANS_ONLY_COLOR : OPEN_PATH_COLOR}
                     strokeWidth={0.12} strokeDasharray={segment.availability === "open" ? undefined : "0.3 0.2"}
                 />
                 // green line if its open
+                // pink line if its open for humans but not robots (R17.1)
                 // red line if it sclosed
 
             ))}
