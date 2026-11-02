@@ -521,7 +521,7 @@ export default function LivePage() {
 
                                 <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#facc15" }} />Visitor</span>
 
-                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Robot (proxy phone)</span>
+                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Simulated robot</span>
 
                                 
                               </div>

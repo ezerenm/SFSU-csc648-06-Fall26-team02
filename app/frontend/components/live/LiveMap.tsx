@@ -327,7 +327,7 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, robotRouteP
                         <text x={0} y={dotRadius + 0.45} fontSize={0.35} fill={dotColor} textAnchor="middle">
                             {getDeviceName(deviceType)}
                         </text>
-                        {/* Visitor or Robot (proxy phone) under the dot */}
+                        {/* Visitor or Simulated robot under the dot */}
 
                     </g>
                 );
