@@ -30,9 +30,15 @@ const OPEN_PATH_COLOR = "lime";
 const CLOSED_PATH_COLOR = "red";
 // red like /viewer
 
+const HUMANS_ONLY_COLOR = "#f472b6";
+// R17.1 pink when a path is open but restricted for robots (humans only)
+
 const ROUTE_COLOR = "deepskyblue";
 // blue like /viewer
 // deep sky blue to pop against purple SFSU background
+
+const ROBOT_ROUTE_COLOR = "orange";
+// R9.2 the simulated robot route, same orange as the robot dot
 
 const NODE_COLOR = "white";
 // node
@@ -62,6 +68,9 @@ type LiveMapProps = {
 
     routePoints?: Xz[];
     // blue route line
+
+    robotRoutePoints?: Xz[];
+    // R9.2 orange dashed line for the simulated robot route
 
     destinationNode?: GraphNode | null;
     // gold ring around the destination
@@ -104,7 +113,7 @@ function getDeviceColor(deviceType: DeviceType): string {
 
 // The Map --------------------------------------------------------------------
 
-export default function LiveMap({ graph, phones, nowMs, routePoints, destinationNode, attachLine, highlightedDeviceId }: LiveMapProps ) {
+export default function LiveMap({ graph, phones, nowMs, routePoints, robotRoutePoints, destinationNode, attachLine, highlightedDeviceId }: LiveMapProps ) {
 
     const nodes = graph.nodes;
     // every node on the map
@@ -183,10 +192,11 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, destination
                     key={segment.segment_id}
                     points={segment.geometry.map((point) => toScreenX(point.x_m) + "," +
                     toScreenY(point.z_m)).join(" ")}
-                    fill="none" stroke={segment.availability === "open" ? OPEN_PATH_COLOR : CLOSED_PATH_COLOR}
+                    fill="none" stroke={segment.availability !== "open" ? CLOSED_PATH_COLOR : segment.robot_access === "restricted" ? HUMANS_ONLY_COLOR : OPEN_PATH_COLOR}
                     strokeWidth={0.12} strokeDasharray={segment.availability === "open" ? undefined : "0.3 0.2"}
                 />
                 // green line if its open
+                // pink line if its open for humans but not robots (R17.1)
                 // red line if it sclosed
 
             ))}
@@ -199,6 +209,16 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, destination
                 />
                 // blue route line
                 
+            )}
+
+            {robotRoutePoints && robotRoutePoints.length > 1 && (
+
+                <polyline
+                    points={robotRoutePoints.map((point) => toScreenX(point.x_m) + "," + toScreenY(point.z_m)).join(" ")}
+                    fill="none" stroke={ROBOT_ROUTE_COLOR} strokeWidth={0.18} strokeDasharray="0.4 0.25" strokeLinecap="round" strokeLinejoin="round"
+                />
+                // R9.2 orange dashed robot route, drawn on top so both routes show when they share a path
+
             )}
 
             {nodes.map((node) => (
@@ -311,7 +331,7 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, destination
                         <text x={0} y={dotRadius + 0.45} fontSize={0.35} fill={dotColor} textAnchor="middle">
                             {getDeviceName(deviceType)}
                         </text>
-                        {/* Visitor or Robot (proxy phone) under the dot */}
+                        {/* Visitor or Simulated robot under the dot */}
 
                     </g>
                 );

@@ -55,7 +55,7 @@ export function getDeviceName(deviceType: DeviceType): string {
 
     } else if (deviceType === "robot") {
 
-        return "Robot (proxy phone)";
+        return "Simulated robot";
 
     } else {
 
