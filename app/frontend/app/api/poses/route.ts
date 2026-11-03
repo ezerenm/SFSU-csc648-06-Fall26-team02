@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
 import { poseOrigin } from "@/lib/spatial/poseOrigin";
+import { poseFields, TRACKING_STATUSES } from "@/lib/spatial/poseFields";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const STATUSES = ["localizing", "valid", "lost"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const isNum = (v: unknown): v is number =>
-  typeof v === "number" && Number.isFinite(v);
 const bad = (reason: string) => NextResponse.json({ reason }, { status: 422 });
 
 function tokenOk(given: string | null) {
@@ -44,15 +42,12 @@ export async function POST(request: Request) {
   if (!UUID.test(map_version_id ?? "")) return bad("map_version_id must be a uuid");
   if (typeof device_id !== "string" || !device_id || device_id.length > 120)
     return bad("device_id must be 1-120 characters");
-  if (!STATUSES.includes(tracking_status))
+  if (!TRACKING_STATUSES.includes(tracking_status))
     return bad("tracking_status must be localizing, valid or lost");
 
-  const p = provider_pose?.position;
-  const r = provider_pose?.rotation;
-  if (!p || !isNum(p.x) || !isNum(p.y) || !isNum(p.z))
-    return bad("provider_pose.position needs numeric x, y, z");
-  if (!r || !isNum(r.x) || !isNum(r.y) || !isNum(r.z) || !isNum(r.w))
-    return bad("provider_pose.rotation needs numeric x, y, z, w");
+  // Only valid samples carry a position; localizing and lost are status reports (R4.1).
+  const fields = poseFields(tracking_status, provider_pose);
+  if ("reason" in fields) return bad(fields.reason);
 
   const when = new Date(captured_at);
   if (Number.isNaN(when.getTime())) return bad("captured_at must be an ISO timestamp");
@@ -76,13 +71,7 @@ export async function POST(request: Request) {
   if (map.vps_map_id && provider_map_id && provider_map_id !== map.vps_map_id)
     return bad("provider_map_id does not match this map version");
 
-  // Unity is left-handed, the database world frame is right-handed (y up): negate z.
-  const world_position = { x_m: p.x, y_m: p.y, z_m: -p.z };
-
-  // Facing direction from the quaternion. 0 = world +Z, positive toward world +X.
-  const fx = 2 * (r.x * r.z + r.w * r.y);
-  const fz = 1 - 2 * (r.x * r.x + r.y * r.y);
-  const heading_deg = (((Math.atan2(fx, -fz) * 180) / Math.PI) % 360 + 360) % 360;
+  const { world_position } = fields;
 
   const { error } = await db.from("pose_samples").insert({
     sample_id,
@@ -90,9 +79,9 @@ export async function POST(request: Request) {
     attempt_id: attempt_id ?? null,
     device_id,
     provider_map_id: provider_map_id ?? null,
-    provider_pose,
+    provider_pose: fields.provider_pose,
     world_position,
-    heading_deg,
+    heading_deg: fields.heading_deg,
     tracking_status,
     // Fake-test poses (Send Fake Pose in Unity) must never be stored as real localizations.
     data_origin: poseOrigin(device_id, data_origin),
