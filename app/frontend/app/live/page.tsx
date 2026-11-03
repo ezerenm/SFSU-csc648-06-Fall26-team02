@@ -38,6 +38,10 @@ import { useGraph } from "@/components/live/useGraph";
 // R9 graph that refreshes every 3 s so closures reroute
 import { pathStateKey } from "@/lib/spatial/pathState";
 // R9 fingerprint of open/closed and robot access
+import { pickRobotPhone, planRobotStart, robotPosition } from "@/lib/spatial/robotRoute";
+// R9.2 which phone is the simulated robot and where its route starts
+import { useRouteRequest } from "@/components/live/useRouteRequest";
+// R9.2 the robot route from /api/route with profile = robot
 
 import RoutePlanner from "@/components/viewer/RoutePlanner";
 // the existing 3d viewer with its route, used for the 3d tab
@@ -90,6 +94,13 @@ export default function LivePage() {
 
   const [routeState, setRouteState] = useState<RouteState | null>(null);
   // the last route we received
+
+  const [robotDestinationId, setRobotDestinationId] = useState("");
+  // R9.2 where the simulated robot should go
+  // empty means no robot route
+
+  const [robotStartId, setRobotStartId] = useState<string | null>(null);
+  // R9.2 the node the robot route starts from
 
   const { phones, nowMs, liveError } = useLivePhones(MAP_VERSION_ID);
   // each phones newest message
@@ -319,6 +330,45 @@ export default function LivePage() {
 
   // Getting the route end ------------
 
+  // Robot route ----------------------
+  // R9.2 the simulated robot gets its own route on robot-allowed paths only
+  // it is recalculated when a path closes, reopens or gets restricted for robots
+
+  const robotPhone = pickRobotPhone(phones);
+  // the robot proxy phone, or null
+
+  const robotTrackingColor = getTrackingColor(robotPhone === null ? null : robotPhone.latestMessage, nowMs);
+  // the robot's own status chip color
+
+  const robotStart = planRobotStart(robotPhone, robotTrackingColor, nodes, segments, robotStartId);
+  // same start rules as the visitor (green chip, within 2 m), robot paths only
+
+  if (robotStart.startNodeId !== robotStartId) {
+
+    setRobotStartId(robotStart.startNodeId);
+    // saving it so the start does not flicker between two nodes
+
+  }
+
+  const robotRoute = useRouteRequest(MAP_VERSION_ID, robotStart.startNodeId, robotDestinationId || null, "robot", pathKey);
+  // profile = robot skips closed paths and paths restricted for robots
+
+  const robotRoutePoints = useMemo(() => (robotRoute.route ? routePolyline(segments, robotRoute.route.steps) : []), [robotRoute.route, segments]);
+  // the robot route as a list of points
+
+  const robotDestination = destinations.find((item) => item.destination_id === robotDestinationId) ?? null;
+
+  const robotDestinationNode = robotDestination ? nodes.find((node) => node.node_id === robotDestination.node_id) ?? null : null;
+
+  const robotSpot = robotPosition(robotPhone);
+  // the robot's last real spot
+
+  const robotArrived = robotTrackingColor === "green" && robotSpot !== null && robotDestinationNode !== null &&
+    distance(robotDestinationNode.position, robotSpot) <= ARRIVED_M;
+  // same arrival rule as the visitor
+
+  // Robot route end ------------------
+
   // Status chip text -----------------
 
   let chipText = "";
@@ -431,6 +481,15 @@ export default function LivePage() {
                                     </label>
                                     {/*  destination dropdown */}
 
+                                  <label className="flex flex-col gap-1 text-sm">
+                                      <span className="font-medium">Simulated robot destination</span>
+                                      <select className={selectClasses} value={robotDestinationId} onChange={(event) => setRobotDestinationId(event.target.value)}>
+                                          <option value="" className="text-gray-900">No robot route</option>
+                                          {destinationPlaces.map((place) => <option key={place.node_id} value={place.destination_id ?? ""} className="text-gray-900">{place.name}</option>)}
+                                      </select>
+                                    </label>
+                                    {/* R9.2 robot destination dropdown */}
+
                               </div>
 
                               {graph && (
@@ -439,6 +498,7 @@ export default function LivePage() {
                                   phones={listPhones(phones)}
                                   nowMs={nowMs}
                                   routePoints={routePoints}
+                                  robotRoutePoints={robotRoutePoints}
                                   destinationNode={destinationNode}
                                   attachLine={attachment !== null && livePosition !== null ? { from: livePosition, to: attachment.attachPoint } : null}
                                   highlightedDeviceId={navigationPhone === null ? null : navigationPhone.deviceId}
@@ -455,11 +515,15 @@ export default function LivePage() {
 
                                 <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "red" }} />Closed path</span>
 
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "#f472b6" }} />Humans only (no robots)</span>
+
                                 <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Route</span>
+
+                                <span><span className="mr-1.5 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: "orange" }} />Robot route</span>
 
                                 <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#facc15" }} />Visitor</span>
 
-                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Robot (proxy phone)</span>
+                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Simulated robot</span>
 
                                 
                               </div>
@@ -470,7 +534,7 @@ export default function LivePage() {
                                   {startChoice === AUTO && liveStartProblem && <p className="font-medium text-yellow-300">{liveStartProblem}</p>}
                                   {/* R6.3 and R6.4 message */}
 
-                                  {rerouteNotice && <p role="status" className="font-medium text-orange-300">Path changed: {rerouteNotice}.{destination ? " Route recalculated." : ""}</p>}
+                                  {rerouteNotice && <p role="status" className="font-medium text-orange-300">Path changed: {rerouteNotice}.{destination || robotDestination ? " Route recalculated." : ""}</p>}
                                   {/* R9 reroute alert */}
 
                                   {!destination && <p className="text-purple-200">Select a destination to see the shortest route.</p>}
@@ -502,6 +566,27 @@ export default function LivePage() {
                                       )
                                   )}
                               </section>
+
+                              {robotDestination && (
+                                <section className="mt-3 text-sm" aria-live="polite">
+                                  {/* R9.2 robot route messages */}
+
+                                    <h2 className="font-medium text-orange-300">Simulated robot route</h2>
+
+                                    {robotStart.problem && <p className="font-medium text-yellow-300">{robotStart.problem}</p>}
+                                    {robotRoute.loading && <p className="text-purple-200">Finding the robot route...</p>}
+                                    {robotRoute.error && <p role="alert" className="font-medium text-red-300">Could not calculate the robot route: {robotRoute.error}</p>}
+
+                                    {robotArrived && <p className="font-semibold text-lime-300">The robot has arrived at {robotDestination.name}.</p>}
+                                    {robotRoute.route?.status === "unreachable" && <p className="font-medium text-red-300">Unreachable for the robot: no robot-allowed route from {nodeName(robotRoute.route.start_node_id)} to {robotDestination.name}.</p>}
+
+                                    {robotRoute.route?.status === "valid" && !robotArrived && (
+                                        robotRoute.route.steps.length === 0
+                                          ? <p className="text-purple-100">The robot is already at {robotDestination.name}.</p>
+                                          : <p className="text-purple-100"><span className="text-xl font-semibold text-orange-300">{formatMeters(robotRoute.route.total_distance_m)}</span> from {nodeName(robotRoute.route.start_node_id)} to {robotDestination.name}, robot-allowed paths only</p>
+                                    )}
+                                </section>
+                              )}
 
                               <section className="mt-4 text-sm">
                                 {/* R19, every phone on this map with its status chip */}
