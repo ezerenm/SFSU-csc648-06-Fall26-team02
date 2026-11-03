@@ -11,5 +11,8 @@ These two scripts are **not** under `Assets/` on purpose: `PoseReporter` depends
 
 ## What it does
 - `PoseReporter`: camera pose relative to the VPS anchor (position + rotation).
+- `PoseReporter`: also tracks the status (R4.1, R3.4). It starts when a site is picked: `localizing` until the first pose, `valid` while tracking, `lost` after a pose was lost, and `timeout` if there is no pose 30 s after the site was picked. On timeout the phone shows a **Retry** button that reloads the scene.
 - `PoseUploader`: POSTs that pose to `<base_url>/api/poses` every 0.5 s with header `x-device-token`. The route converts Unity z to world z (`z_world = -z_unity`), computes heading, and inserts into `pose_samples`. The `/live` page shows it through Supabase Realtime.
-- On-screen status line: `upload: sent N failed M`.
+- While localizing or lost it POSTs a status every 1 s with no position (the server ignores the zero pose Unity sends). After a timeout it keeps sending `localizing`, because NSDK keeps trying; `/live` then shows "Timed out, try again".
+- Set `"data_origin": "synthetic"` in `uploader.local.json` when testing away from the real site, so test runs never count as real localizations. Leave it empty for real runs.
+- On-screen status line: `upload: <status>  sent N failed M`.
