@@ -7,7 +7,7 @@ CSC 648/848 Software Engineering, Section 06, Team 02 (Fall 2026)
 - **Live site:** https://sfsu-csc648-06-fall26-team02.vercel.app
 - **About page:** https://sfsu-csc648-06-fall26-team02.vercel.app/about
 - **M3 task board:** https://github.com/users/tduong64/projects/1
-- **Current milestone:** [M3](milestones/M3/README.md) (Appendix I submitted Nov 4, 2026)
+- **Current milestone:** [M3](milestones/M3) (Appendix I submitted Nov 4, 2026)
 
 ## Team
 
@@ -147,8 +147,8 @@ Supabase PostgreSQL with Row Level Security on every table. Schema changes are o
 |---|---|
 | [M0](milestones/M0) | Team setup report |
 | [M1](milestones/M1) | Requirements, personas, competitive analysis |
-| [M2](milestones/M2/README.md) | M2 document, vertical prototype, backend handoff, contracts, seed data |
-| [M3](milestones/M3/README.md) | Appendix I (feedback and action plan, frozen P1 list, UML, risks), UML sources, M3 backend handoff |
+| [M2](milestones/M2) | M2 document, vertical prototype, backend handoff, contracts, seed data |
+| [M3](milestones/M3) | Appendix I (feedback and action plan, frozen P1 list, UML, risks), UML sources, M3 backend handoff |
 | M4, M5 | Upcoming |
 
 ## Deployment

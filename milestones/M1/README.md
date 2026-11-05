@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Submitted document** | [SpatialOS_M1_Section06_Team02.pdf](SpatialOS_M1_Section06_Team02.pdf) ([.docx](SpatialOS_M1_Section06_Team02.docx)) |
-| **Next milestone** | [Milestone 2](../M2/README.md) |
+| **Next milestone** | [Milestone 2](../M2) |
 
 ## What M1 defined
 

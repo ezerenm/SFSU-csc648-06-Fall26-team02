@@ -6,7 +6,7 @@
 |---|---|
 | **Appendix I** | [SpatialOS_M3_AppendixI_Section06_Team02.pdf](SpatialOS_M3_AppendixI_Section06_Team02.pdf) ([.docx](SpatialOS_M3_AppendixI_Section06_Team02.docx)) |
 | **Production site** | <https://sfsu-csc648-06-fall26-team02.vercel.app> (deployed from `main`) |
-| **Previous milestone** | [Milestone 2](../M2/README.md) |
+| **Previous milestone** | [Milestone 2](../M2) |
 
 ## Contents
 

@@ -6,7 +6,7 @@
 |---|---|
 | **Final document** | [SpatialOS_M2_Section06_Team02.pdf](SpatialOS_M2_Section06_Team02.pdf) ([.docx](SpatialOS_M2_Section06_Team02.docx)) |
 | **Vertical prototype** | <https://sfsu-csc648-06-fall26-team02.vercel.app> (deployed from `main`) |
-| **Next milestone** | [Milestone 3](../M3/README.md) |
+| **Next milestone** | [Milestone 3](../M3) |
 
 ## Contents
 
@@ -28,7 +28,7 @@
 
 ## Instructor feedback
 
-M2 feedback (Oct 24 and Oct 26, 25 comments) asked for a subject on every requirement, four grounded personas, an end-to-end SFSU pilot scenario, a real robot simulation mechanism (the robot proxy phone) and merged UX flows. These changes were carried into [Milestone 3](../M3/README.md). The revised M2 document is resubmitted with M5.
+M2 feedback (Oct 24 and Oct 26, 25 comments) asked for a subject on every requirement, four grounded personas, an end-to-end SFSU pilot scenario, a real robot simulation mechanism (the robot proxy phone) and merged UX flows. These changes were carried into [Milestone 3](../M3). The revised M2 document is resubmitted with M5.
 
 ## Backend handoff (Noah Bran)
 
@@ -111,6 +111,6 @@ The migration and seed were applied through the project's Supabase SQL Editor; a
 
 ### Scope boundaries
 
-M2 implements manual-start route integration, published graph reads and synthetic attempt search. It does not implement robot simulation, live closures, automatic rerouting, a health dashboard, Gemini summaries, live-start snapping, or phone telemetry ingestion. Human/robot access fields and profile contracts support routing without implementing a simulated robot. M3 added rerouting, the simulated robot route, the operator screen, health and the Gemini summary; see the [M3 README](../M3/README.md).
+M2 implements manual-start route integration, published graph reads and synthetic attempt search. It does not implement robot simulation, live closures, automatic rerouting, a health dashboard, Gemini summaries, live-start snapping, or phone telemetry ingestion. Human/robot access fields and profile contracts support routing without implementing a simulated robot. M3 added rerouting, the simulated robot route, the operator screen, health and the Gemini summary; see [Milestone 3](../M3).
 
 The inspected source branches were `origin/dev` at `2d1ea9d`, `origin/chore/backend-schema` at `30f961c`, `origin/docs/m2-data-definitions` at `2ec1d0c`, and `origin/feature/m2-viewer` at `47f67cd`. The backend schema branch was already included in `dev`. No teammate branch was merged or cherry-picked. Sumit's Section 1 and Ezeren's viewer remain owned on their respective branches.

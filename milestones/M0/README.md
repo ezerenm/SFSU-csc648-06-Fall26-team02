@@ -6,7 +6,7 @@
 |---|---|
 | **Submitted report** | [CSC 648-848 M0 section 6 Team 2.pdf](CSC%20648-848%20M0%20section%206%20Team%202.pdf) ([.docx](CSC%20648-848%20M0%20section%206%20Team%202.docx)) |
 | **Team About page** | <https://sfsu-csc648-06-fall26-team02.vercel.app/about> |
-| **Next milestone** | [Milestone 1](../M1/README.md) |
+| **Next milestone** | [Milestone 1](../M1) |
 
 ## What M0 set up
 
