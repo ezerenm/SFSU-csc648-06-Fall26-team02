@@ -1,0 +1,41 @@
+%% Fig I.4 Flow 2: Visitor picks a destination and follows the route (R5.1-R5.5, R6.2-R6.4, R20)
+sequenceDiagram
+    box rgba(0,158,115,0.13) Visitor
+    actor V as Visitor
+    participant L as /live page
+    end
+    box transparent Platform
+    participant API as POST /api/route
+    participant DB as Supabase<br/>m2_get_graph()
+    participant R as RoutingEngine<br/>findRoute (Dijkstra)
+    end
+
+    V->>L: choose a destination
+    L->>L: findNearestSegment(live position, human)
+    alt chip not green, or more than 2 m from any path
+        L-->>V: keep the previous start (or no route yet:<br/>"Can't start here")
+    else
+        L->>L: pickStartNode: nearer end of the segment<br/>(draw the gold attach line)
+        L->>API: map_version_id, start_node_id,<br/>destination_id, profile = human
+        API->>API: check the body (400)
+        API->>DB: load graph (nodes, segments, destinations)
+        DB-->>API: graph + revisions (404 if map not visible)
+        API->>API: start node + active destination exist (404)
+        API->>R: findRoute(nodes, segments, start, end, profile)
+        R-->>API: steps over open segments only<br/>(robot profile also skips restricted)
+        API->>API: validateRoutingResult: connected, open, allowed,<br/>no repeated node (502 if wrong)
+        alt no permitted path
+            API-->>L: status = unreachable
+            L-->>V: "Unreachable: no open path"
+        else
+            API-->>L: status = valid, steps, distance_m,<br/>graph_revision, path_state_revision
+            L-->>V: route line + distance (one decimal)
+        end
+    end
+    loop each new live pose
+        L->>L: switch start node only if 0.75 m closer (anti-flicker)
+        L-->>V: "Arrived" when the chip is green<br/>and within 1.0 m of the destination
+    end
+    rect rgb(238,238,238)
+        Note over V,L: Priority 2, if time allows (R20): the same route and arrival on the visitor's iPhone, not only on /live
+    end

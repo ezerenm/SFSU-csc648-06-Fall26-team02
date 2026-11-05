@@ -1,0 +1,56 @@
+%% Fig I.5 Flow 3: Wet floor - report, operator confirms and closes, everyone reroutes (R18.7, R18.4, R18.5, R8.1-R8.3, R9.1-R9.3)
+sequenceDiagram
+    box rgba(0,158,115,0.13) Visitor
+    actor V as Visitor (phone)
+    end
+    box rgba(142,68,173,0.12) Operator
+    actor O as Operator<br/>(/operator page)
+    end
+    box transparent Platform
+    participant API as Server API
+    participant DB as Supabase
+    participant L as /live page
+    end
+
+    rect rgb(238,238,238)
+        Note over V,DB: Priority 2: report and confirm (R18.7, R18.4, R18.5)
+        V->>API: POST /api/reports (segment, kind = wet_floor, session_id)
+        API->>DB: insert path_report (status = pending)
+        DB-->>O: Realtime alert "Wet floor reported on S2"
+        O->>O: check the report (camera, staff on site)
+    end
+    Note over O,DB: Built (PR #35;67, #35;69): operator panel on /operator. No accounts yet, so a shared operator token
+    O->>API: PATCH /api/segments<br/>segment_id, action = close (or reopen,<br/>humans_only, allow_robots) + x-operator-token
+    alt wrong token
+        API-->>O: 401 (nothing changes)
+    else token ok
+        API->>DB: read the segment (404 if unknown)
+        API->>DB: bump current_path_state_revision<br/>only if nobody changed it meanwhile
+        alt another change landed first
+            API-->>O: 409 "try again"
+        else
+            API->>DB: update availability / robot_access<br/>+ last_state_revision
+            API->>API: log the change on the server<br/>(path_event table planned)
+            API-->>O: 200 changed
+        end
+    end
+    Note over API,L: Built (PR #35;62, #35;64): rerouting by polling, for the visitor and the simulated robot
+    loop every 3 s while the tab is visible
+        L->>API: GET /api/graph
+        API-->>L: graph
+        L->>L: pathStateKey(graph)
+        opt pathStateKey changed
+            L->>API: POST /api/route again: visitor (human)<br/>and simulated robot (robot profile)
+            alt another open path exists
+                API-->>L: valid, new steps
+                L->>L: new route + banner "Path changed: S2 closed.<br/>Route recalculated." (20 s)
+            else
+                API-->>L: unreachable
+                L->>L: "Unreachable: no open path"
+            end
+        end
+    end
+    rect rgb(238,238,238)
+        Note over V,L: Priority 2 (R20): the visitor's phone shows the new route too. Today only /live does
+    end
+    Note over O,L: Reopen (R8.2) is the same flow with action = reopen. Humans only (R17.1) changes only the robot route

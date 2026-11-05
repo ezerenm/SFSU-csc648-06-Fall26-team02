@@ -1,0 +1,19 @@
+{
+ "theme": "neutral",
+ "themeVariables": {
+  "fontFamily": "Helvetica, Arial, sans-serif",
+  "fontSize": "15px",
+  "noteBkgColor": "#fffbe6",
+  "noteTextColor": "#222222",
+  "noteBorderColor": "#c9b458"
+ },
+ "sequence": {
+  "mirrorActors": false,
+  "actorMargin": 40,
+  "messageFontSize": 14,
+  "noteFontSize": 13,
+  "wrap": true,
+  "boxMargin": 8,
+  "useMaxWidth": false
+ }
+}

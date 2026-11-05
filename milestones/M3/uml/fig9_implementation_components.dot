@@ -1,0 +1,58 @@
+digraph impl {
+  rankdir=LR; nodesep=0.18; ranksep=0.45; newrank=true;
+  graph [fontname="Arial", fontsize=11, labeljust=l, style="rounded", color="#7F8FA6", penwidth=1];
+  node  [fontname="Arial", fontsize=9, shape=box, style="rounded,filled", fillcolor="#DCE9F7", color="#1F3864", penwidth=0.8, margin="0.08,0.04"];
+  edge  [fontname="Arial", fontsize=7.5, color="#44546A", arrowsize=0.6];
+
+  subgraph cluster_phone { label="iPhone app (Unity, C#)";
+    reporter [label="PoseReporter\nstatus: localizing / valid / lost\n30 s timeout + Retry"];
+    uploader [label="PoseUploader\nsends a pose every 0.5 s,\nstatus every 1 s"];
+    attemptRec [label="Attempt recorder\n3 attempts at each test point stop", fillcolor="#EDEDED", style="rounded,filled,dashed", color="#7F7F7F"];
+  }
+
+  subgraph cluster_api { label="API routes (Next.js, app/api)";
+    poses [label="POST /api/poses\ndevice token"];
+    health [label="GET /api/health"];
+    summary [label="POST /api/health/summary"];
+    route [label="POST /api/route"];
+    segments [label="PATCH /api/segments\noperator token, 409 on conflict"];
+    attemptsW [label="POST attempts + runs\n(R11.1, R12.1, R12.2)", fillcolor="#EDEDED", style="rounded,filled,dashed", color="#7F7F7F"];
+  }
+
+  subgraph cluster_server { label="Server layer (lib/spatial/server)";
+    handlers [label="createHandlers(repository,\nrouting, gemini)\nhandlers.ts"];
+    repo [label="SpatialRepository (interface)\nSupabase implementation;\ntests pass a stub"];
+    gemini [label="createGeminiCaller\ngemini.ts: REST, retry,\n15 s deadline"];
+    token [label="tokenMatches\ntoken.ts: constant time"];
+  }
+
+  subgraph cluster_domain { label="Domain logic (lib/spatial, lib/routing), no I/O";
+    poseFields [label="poseFields + poseOrigin\nposition only on valid samples"];
+    healthTs [label="computeAllHealth / classify\nhealth.ts: R14 rules in order"];
+    summaryTs [label="buildHealthFacts, buildSummaryPrompt,\nparseSummary + unsupportedNumbers\nhealthSummary.ts: drops unchecked numbers"];
+    findRoute [label="findRoute (Dijkstra + minHeap)\nhuman / robot profile"];
+    segChange [label="applySegmentAction\nsegmentChange.ts"];
+  }
+
+  subgraph cluster_ext { label="Database and external";
+    db [label="Supabase Postgres\npose_samples, localization_attempts,\npath_segments, map_versions (RLS)", fillcolor="#F2F2F2", color="#7F7F7F"];
+    gapi [label="Google Gemini API", fillcolor="#F2F2F2", color="#7F7F7F"];
+  }
+
+  reporter -> uploader [label="status"];
+  uploader -> poses [label="HTTPS"];
+  attemptRec -> attemptsW [style=dashed, color="#7F7F7F"];
+  poses -> poseFields; poses -> db [label="insert pose"];
+  attemptsW -> db [style=dashed, color="#7F7F7F", label="insert attempt"];
+
+  health -> handlers; summary -> handlers; route -> handlers;
+  handlers -> repo [label="read graph, attempts"];
+  repo -> db;
+  handlers -> healthTs [label="compute"];
+  handlers -> summaryTs [label="facts, check"];
+  handlers -> gemini [label="ask"];
+  gemini -> gapi;
+  handlers -> findRoute [label="route"];
+
+  segments -> token; segments -> segChange; segments -> db [label="update + revision"];
+}

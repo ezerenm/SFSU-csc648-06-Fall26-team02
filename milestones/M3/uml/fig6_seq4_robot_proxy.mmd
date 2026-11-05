@@ -1,0 +1,44 @@
+%% Fig I.6 Flow 4: Simulated robot with the robot proxy phone (R9.2, R10.2, R10.3, R17.1, R19; R5.6, R10.1 planned)
+sequenceDiagram
+    box rgba(230,159,0,0.16) Simulated robot
+    actor T as Tester with<br/>robot proxy phone
+    participant P as iPhone app<br/>(iphone-daksh)
+    end
+    box rgba(142,68,173,0.12) Operator
+    actor O as Operator
+    end
+    box transparent Platform
+    participant L as /live page
+    participant API as Server API
+    participant DB as Supabase
+    end
+
+    loop every 0.5 s (same pose upload as Flow 1)
+        P->>API: POST /api/poses (device_id = iphone-daksh)
+        API->>DB: insert pose_sample
+        DB-->>L: Realtime INSERT (or the polling fallback)
+        L->>L: deviceTypes: iphone-daksh is the robot,<br/>orange dot labeled "Simulated robot" (R10.2, R19)
+    end
+    O->>L: pick a "Simulated robot destination"
+    L->>L: robotRoute: robot start needs a green chip within 2 m<br/>of a robot-allowed path, nearer end, 0.75 m anti-flicker
+    L->>API: POST /api/route (profile = robot)
+    alt a robot-allowed path exists
+        API-->>L: steps over open, robot-allowed segments
+        L->>L: orange dashed robot route,<br/>"humans only" segments drawn pink (R17.1)
+    else
+        API-->>L: unreachable
+        L->>L: no permitted robot route message
+    end
+    T->>T: walks the robot along the orange route
+    opt path state changes (operator close or humans only, Flow 3)
+        L->>API: POST /api/route again, profile = robot (R9.2, R10.3)
+        API-->>L: new robot route, the visitor route is unchanged
+    end
+    L->>L: robot arrived: green chip and within 1.0 m
+    rect rgb(238,238,238)
+        Note over T,DB: Planned M4: robot sessions and commands (tables in PR #35;57, no API yet). Pause and reset are Priority 2
+        P->>API: POST /api/sessions (agent_type = robot_proxy)
+        O->>API: POST /api/robot-commands: set_destination (R5.6),<br/>start (R10.1), pause / reset (R10.4, R10.5, P2)
+        API->>DB: robot_command applied, or rejected with a reason
+        P->>API: GET /api/robot-state, next step shown on the robot phone
+    end
