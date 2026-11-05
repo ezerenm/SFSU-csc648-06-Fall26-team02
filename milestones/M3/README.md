@@ -1,15 +1,19 @@
-# Milestone 3: SpatialOS
+# Milestone 3: Demo, Frozen Priority 1 List and Appendix I
 
-SW Engineering CSC 648/848, Section 06, Team 02. Demo on Nov 3, 2026 in HSS 349; Appendix I submitted on Nov 4, 2026.
+**SpatialOS** · SW Engineering CSC 648/848 · Section 06, Team 02 · Demo November 3, 2026 · Appendix I submitted November 4, 2026
 
-Production site: <https://sfsu-csc648-06-fall26-team02.vercel.app> (deploys from `main`; M3 state is PR #70, Nov 3).
+| | |
+|---|---|
+| **Appendix I** | [SpatialOS_M3_AppendixI_Section06_Team02.pdf](SpatialOS_M3_AppendixI_Section06_Team02.pdf) ([.docx](SpatialOS_M3_AppendixI_Section06_Team02.docx)) |
+| **Production site** | <https://sfsu-csc648-06-fall26-team02.vercel.app> (deployed from `main`) |
+| **Previous milestone** | [Milestone 2](../M2/README.md) |
 
 ## Contents
 
-| File | What it is |
+| Path | What it is |
 |---|---|
-| [`SpatialOS_M3_AppendixI_Section06_Team02.docx`](SpatialOS_M3_AppendixI_Section06_Team02.docx) | Appendix I. Item 1: instructor feedback, demo record and action plan. Item 2: frozen Priority 1 list. Item 3: UML. Item 4: actual risks. |
-| [`uml/`](uml/) | Sources and images for the Item 3 diagrams: use case, domain classes, implementation classes, implementation components and six sequence diagrams, with re-render commands. |
+| [`SpatialOS_M3_AppendixI_Section06_Team02.pdf`](SpatialOS_M3_AppendixI_Section06_Team02.pdf) | **Submitted Appendix I.** Item 1: instructor feedback, demo record, UI and usability changes, action plan. Item 2: frozen Priority 1 list. Item 3: UML. Item 4: actual risks. |
+| [`uml/`](uml/) | Sources and images for the Item 3 diagrams, with re-render commands |
 
 ## Status
 
@@ -20,7 +24,7 @@ Production site: <https://sfsu-csc648-06-fall26-team02.vercel.app> (deploys from
 | Partial | R3.4, R5.6, R8.3, R10.1, R11.1 |
 | Not started | R1.1 to R1.4 (accounts), R12.1 to R12.4 (attempt logging, live capture, failure list), R13.1, R13.2 (charts) |
 
-After the M3 review the main point of the project is **data and localization accuracy**. Navigation stays as built and drives the data collection runs; visitor iOS navigation (R20) moved to Priority 2. The 2-week collection plan (Nov 5 to 18) is in Appendix I, Item 1.
+After the M3 review the main point of the project is **data and localization accuracy**. Navigation stays as built and drives the data collection runs; visitor iOS navigation (R20) moved to Priority 2, and the 3D view is the one map view. The 2-week collection plan (Nov 5 to 18) is in Appendix I, Item 1.
 
 ## What M3 added
 
