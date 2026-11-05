@@ -435,7 +435,7 @@ Gemini receives only aggregate metrics and attempt IDs, never camera data. All n
 - A **metric snapshot** records the exact attempts it was computed from; an **AI summary** cites one snapshot.
 - History is preserved: attempts, events and referenced map versions are retired, not deleted.
 
-![Figure 1.1: M2 database tables (key fields)](diagrams/M2_ER_Diagram.png)
+![Figure 1.1: M2 database tables (key fields)](../diagrams/M2_ER_Diagram.png)
 
 *Figure 1.1: M2 database tables (key fields)*
 
