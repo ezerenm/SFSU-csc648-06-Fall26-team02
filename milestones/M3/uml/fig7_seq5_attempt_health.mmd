@@ -1,0 +1,47 @@
+%% Fig I.7 Flow 5: Data collection run: capture, failures and accuracy (R11.1, R12.1-R12.4, R13.1, R13.2, R14)
+sequenceDiagram
+    box rgba(230,159,0,0.16) Simulated robot
+    actor T as Tester with<br/>robot proxy phone
+    participant P as iPhone app
+    end
+    box rgba(120,120,120,0.10) External
+    participant N as Niantic VPS
+    end
+    box rgba(142,68,173,0.12) Operator
+    actor O as Operator
+    end
+    box transparent Platform
+    participant L as /live and<br/>/operator pages
+    participant H as /health page
+    participant API as Server API
+    participant DB as Supabase
+    end
+
+    Note over P,DB: Built: every pose and tracking status is already saved (pose_samples, PR #35;65)
+    rect rgb(238,238,238)
+        Note over T,DB: Planned M4 (P1): data collection run. Schema in PR #35;57, write API not built yet
+        T->>P: start a collection run (R11.1)
+        P->>API: POST /api/sessions (one session = one run)
+        loop at each test point on the route (TP1 to TP5)
+            P->>N: localize (30 s limit)
+            alt pose within 30 s
+                P->>API: POST /api/localization-attempts<br/>outcome = success, latency_ms, valid pose (R12.1)
+                API->>DB: save attempt, horizontal error vs the<br/>verified reference (error_is_valid trigger, PR #35;57)
+            else timeout / tracking loss / network error / map mismatch
+                P->>API: POST outcome + failure reason, no pose (R12.2)
+                API->>DB: save the failure
+            end
+            DB-->>L: Realtime: live capture marker on the robot +<br/>run counts (samples, attempts, failures) (R12.3)
+        end
+        T->>P: stop the run: counts stay as the run summary
+        O->>L: failure list: type, reason, test point, device, time,<br/>tracking status before the failure, filters (R12.4)
+        O->>H: charts per test point by day:<br/>success rate, horizontal error (R13.1, R13.2)
+    end
+    O->>H: open /health (built, PR #35;58, #35;61)
+    H->>API: GET /api/health?map_version_id=...&mode=live
+    API->>DB: test points + completed attempts for this map (RLS)
+    DB-->>API: attempts
+    API->>API: computeAllHealth: per test point + device,<br/>rules in order, first match wins
+    Note right of API: gray < 10 attempts · red success < 60% ·<br/>red ≥ 5 verified errors and median > 1.5 m ·<br/>gray < 5 verified errors · green ≥ 80% and ≤ 1 m · else yellow
+    API-->>H: one result per test point with its reason (no attempts = gray)
+    H-->>O: color, reason, successes / attempts, median seconds
