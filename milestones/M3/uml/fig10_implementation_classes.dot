@@ -1,0 +1,74 @@
+digraph classes {
+  rankdir=TB; nodesep=0.3; ranksep=0.35; newrank=true;
+  graph [fontname="Arial", fontsize=11, labeljust=l, style="rounded", color="#7F8FA6"];
+  node  [fontname="Arial", fontsize=9, shape=plain];
+  edge  [fontname="Arial", fontsize=8, color="#44546A", arrowsize=0.7];
+
+  subgraph cluster_phone { label="iPhone app (C#, app/phone/live-position)";
+    PoseReporter [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>PoseReporter</b> : MonoBehaviour</td></tr>
+      <tr><td align="left" balign="left" sides="t">+ TimeoutSeconds: float = 30<br/>+ Status: string  (none, localizing, valid, lost, timeout)<br/>+ HasPose: bool<br/>+ Position: Vector3<br/>+ Rotation: Quaternion<br/>- _startedAt: float<br/>- _hadPose: bool</td></tr>
+      <tr><td align="left" balign="left" sides="t">- Update(): void<br/>+ Retry(): void<br/>- OnGUI(): void</td></tr></table>>];
+    PoseUploader [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>PoseUploader</b> : MonoBehaviour</td></tr>
+      <tr><td align="left" balign="left" sides="t">- _reporter: PoseReporter<br/>- _cfg: Config<br/>- _intervalSeconds: float = 0.5<br/>- _statusIntervalSeconds: float = 1<br/>- _sent, _failed: int</td></tr>
+      <tr><td align="left" balign="left" sides="t">- Start(): void  (loads Config)<br/>- Update(): void<br/>- Send(real: bool, tracking: string): IEnumerator<br/>- OnGUI(): void</td></tr></table>>];
+    Config [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>PoseUploader.Config</b></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ base_url, device_token: string<br/>+ map_version_id, device_id: string<br/>+ data_origin: string</td></tr></table>>];
+  }
+
+  subgraph cluster_server { label="Server (TypeScript, lib/spatial/server)";
+    Handlers [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>Handlers</b><br/><font point-size="8">object made by createHandlers(repository, route, summarizer)</font></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ graph(req: Request): Promise&lt;Response&gt;<br/>+ attempts(req: Request): Promise&lt;Response&gt;<br/>+ health(req: Request): Promise&lt;Response&gt;<br/>+ healthSummary(req: Request): Promise&lt;Response&gt;<br/>+ route(req: Request): Promise&lt;Response&gt;</td></tr></table>>];
+    Repo [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><font point-size="8">«interface»</font><br/><b>SpatialRepository</b></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ graph(mapVersionId): Promise&lt;GraphResponse | null&gt;<br/>+ attempts(filters): Promise&lt;{ items, total }&gt;<br/>+ healthAttempts(mapVersionId, mode): Promise&lt;HealthAttempt[]&gt;</td></tr></table>>];
+    SupaRepo [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>Supabase repository</b><br/><font point-size="8">supabaseRepository(client)</font></td></tr>
+      <tr><td align="left" balign="left" sides="t">reads via Supabase, RLS decides visibility</td></tr></table>>];
+    StubRepo [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#F2F2F2" color="#7F7F7F">
+      <tr><td><b>Test stub repository</b><br/><font point-size="8">tests/*-api.test.ts</font></td></tr></table>>];
+    Gemini [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><font point-size="8">«function type»</font><br/><b>GeminiCaller</b><br/><font point-size="8">made by createGeminiCaller(options) / geminiFromEnv()</font></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ (prompt: string): Promise&lt;GeminiResult&gt;<br/>  retries 429 / 500 / 503 inside a 15 s deadline</td></tr></table>>];
+    GeminiError [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>GeminiError</b> : Error</td></tr>
+      <tr><td align="left" balign="left" sides="t">+ kind: "timed_out" | "failed"</td></tr></table>>];
+    ApiError [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>ApiError</b> : Error</td></tr>
+      <tr><td align="left" balign="left" sides="t">status, code, message</td></tr></table>>];
+  }
+
+  subgraph cluster_domain { label="Domain logic (lib/spatial, lib/routing), no I/O";
+    HealthSummary [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><font point-size="8">«module»</font><br/><b>healthSummary.ts</b></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ buildHealthFacts(points, mode): HealthFacts<br/>+ buildSummaryPrompt(facts): string<br/>+ parseSummary(raw, facts): ParsedSummary<br/>+ unsupportedNumbers(text, facts): string[]</td></tr></table>>];
+    Health [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><font point-size="8">«module»</font><br/><b>health.ts</b></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ computeAllHealth(attempts, mode): HealthResult[]<br/>+ computeHealth(key, attempts, mode): HealthResult<br/>+ classify(metrics): { status, reason }<br/>+ median(values): number | null</td></tr></table>>];
+    FindRoute [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><font point-size="8">«module»</font><br/><b>findRoute.ts</b> (Dijkstra)</td></tr>
+      <tr><td align="left" balign="left" sides="t">+ findRoute(nodeIds, segments, startNodeId,<br/>    endNodeId, profile): RouteResult<br/>+ isUsable(segment, profile): boolean</td></tr></table>>];
+    MinHeap [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#DCE9F7" color="#1F3864">
+      <tr><td><b>MinHeap&lt;T&gt;</b></td></tr>
+      <tr><td align="left" balign="left" sides="t">+ size: number<br/>+ push(item: T, priority: number): void<br/>+ pop(): { item, priority } | undefined<br/>- bubbleUp(i), sinkDown(i), swap(a, b)</td></tr></table>>];
+  }
+
+  PoseUploader -> PoseReporter [label="  reads Status, Position  ", arrowhead=vee];
+  PoseUploader -> Config [arrowhead=none, arrowtail=diamond, dir=both, label="  1"];
+  PoseReporter -> Handlers [style=invis]; Config -> Handlers [style=invis];
+  Repo -> HealthSummary [style=invis]; Gemini -> Health [style=invis]; GeminiError -> FindRoute [style=invis]; ApiError -> FindRoute [style=invis];
+
+  Handlers -> Repo [arrowhead=vee, label="  1  "];
+  Handlers -> Gemini [arrowhead=vee, label="  0..1  "];
+  SupaRepo -> Repo [arrowhead=empty, style=dashed, label=" implements "];
+  StubRepo -> Repo [arrowhead=empty, style=dashed, color="#7F7F7F", label=" implements "];
+  Gemini -> GeminiError [style=dashed, arrowhead=vee, label=" throws "];
+  Handlers -> ApiError [style=dashed, arrowhead=vee, label=" throws "];
+  Handlers -> HealthSummary [style=dashed, arrowhead=vee, label=" uses "];
+  Handlers -> Health [style=dashed, arrowhead=vee, label=" uses "];
+  Handlers -> FindRoute [style=dashed, arrowhead=vee, label=" route function "];
+  FindRoute -> MinHeap [style=dashed, arrowhead=vee, label=" uses "];
+}

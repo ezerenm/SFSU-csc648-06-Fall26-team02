@@ -1,0 +1,38 @@
+%% Fig I.8 Flow 6: Explain health with AI (R16.1, core AI)
+sequenceDiagram
+    box rgba(142,68,173,0.12) Operator
+    actor O as Operator
+    participant H as /health page<br/>(HealthPanel)
+    end
+    box transparent Platform
+    participant API as POST /api/health/summary
+    participant S as healthSummary.ts
+    end
+    box rgba(120,120,120,0.10) External
+    participant G as Gemini API<br/>(gemini-flash-lite-latest)
+    end
+
+    O->>H: click "Explain with AI"
+    H->>API: map_version_id, mode (POST, so previews never trigger a paid call)
+    API->>API: same health as Flow 5 (400 / 404)
+    API->>S: buildHealthFacts(points, mode)
+    S-->>API: rounded facts per point, untested points as gray, color totals
+    alt no GEMINI_API_KEY
+        API-->>H: 200 status = unavailable + facts
+    else key configured
+        API->>S: buildSummaryPrompt(facts) (prompt v2: only use numbers from FACTS)
+        loop up to 3 tries on 429 / 500 / 503, inside one 15 s deadline
+            API->>G: generateContent (key in header, JSON reply, temperature 0.2)
+            G-->>API: JSON text, or 429 / 5xx
+        end
+        alt timed out or error
+            API->>API: log status + reason on the server only
+            API-->>H: 200 status = timed_out or failed + facts
+        else reply received
+            API->>S: parseSummary(reply, facts)
+            S->>S: drop any sentence with a number or test point<br/>that is not in the facts (rejected_count)
+            S-->>API: ≤ 6 observations, ≤ 3 suggestions
+            API-->>H: 200 status = completed (failed if nothing passed),<br/>model_version, prompt_version, facts
+        end
+    end
+    H-->>O: observations + "Suggested next steps",<br/>footer: model, every number was checked<br/>(or a clear message for the other statuses)

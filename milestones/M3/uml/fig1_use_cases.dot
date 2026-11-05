@@ -1,0 +1,94 @@
+// Fig I.1 SpatialOS M3 use cases: 4 personas + the simulated robot. Render: dot -Tpng -Gdpi=150
+digraph UseCases {
+  graph [rankdir=LR, fontname="Helvetica", fontsize=12, nodesep=0.18, ranksep=1.1, pad=0.2];
+  node  [fontname="Helvetica", fontsize=11];
+  edge  [color="#4a5a6a", arrowsize=0.7, fontname="Helvetica", fontsize=9];
+
+  node [shape=none, image="stick.png", imagepos=tc, labelloc=b, width=1.5, height=1.7, fixedsize=true];
+  V [label="Visitor\n(human, iPhone)", image="stick_visitor.png", fontcolor="#007A58"];
+  R [label="Simulated robot\n(robot proxy phone)", image="stick_robot.png", fontcolor="#A86F00"];
+  O [label="Operator\n(SFSU Facilities)", image="stick_operator.png", fontcolor="#8E44AD"];
+  D [label="Developer\n(robot company\ndeployment engineer)", height=1.9, image="stick_developer.png", fontcolor="#0072B2"];
+  A [label="Administrator\n(SFSU pilot owner)", image="stick_admin.png", fontcolor="#C04E00"];
+
+  node [shape=box, image="", style="rounded", color="#5b7a99", width=1.4, height=0.6, fixedsize=false, labelloc=c];
+  N [label="«external system»\nNiantic VPS"];
+  G [label="«external system»\nGemini API"];
+
+  node [shape=ellipse, style=filled, color="#5b7a99", fillcolor="#dbe9f7", width=2.9, height=0.55, fixedsize=true, fontsize=10.5];
+
+  subgraph cluster_sys {
+    label=<<b>SpatialOS: one SFSU site</b>>; color="#5b7a99"; penwidth=1.4; margin=14;
+    subgraph cluster_nav {
+      label="Navigation"; style=dashed; color="#9fb3c8"; fontsize=11;
+      LOC    [label="Localize the phone\nR3.1, R3.4, R4.1"];
+      LIVE   [label="See live position + status chip\nR3.2, R4.1, R6.2"];
+      ROUTE  [label="Choose destination, follow route\nR5.1–R5.4 (phone view R20: P2)"];
+      FOLLOW [label="Follow the robot route\nR5.4, R10.2, R10.3", fillcolor="#fff2b3"];
+      REPORT [label="Report a problem on a path\nR18.7, R18.3 (P2)", fillcolor="#eeeeee"];
+    }
+    subgraph cluster_ops {
+      label="Operations"; style=dashed; color="#9fb3c8"; fontsize=11;
+      WATCH    [label="Watch visitor + robot live\nR19, R10.2"];
+      CONFIRM  [label="Confirm / reject a blockage\nR18.4–R18.6 (P2, P3)", fillcolor="#eeeeee"];
+      CLOSE    [label="Close / reopen a path segment\nR8.1–R8.3"];
+      RESTRICT [label="Restrict a segment for robots\nR17.1, R17.2"];
+      ROBOT    [label="Command robot: destination, start R5.6, R10.1\n(pause, reset R10.4–5: P2)", fillcolor="#fff2b3", width=3.2];
+      REROUTE  [label="Recalculate active routes (system)\nR9.1–R9.3"];
+    }
+    subgraph cluster_rel {
+      label=<<b>Data and accuracy (main focus after M3)</b>>; style=dashed; color="#9fb3c8"; fontsize=11;
+      RUN     [label="Run a data collection run\nR11.1", fillcolor="#fff2b3"];
+      ATTEMPT [label="Record attempts and failures\nR12.1, R12.2", fillcolor="#eeeeee"];
+      CAPTURE [label="See live data capture\nR12.3", fillcolor="#eeeeee"];
+      FAILS   [label="Debug failures (failure list)\nR12.4", fillcolor="#eeeeee"];
+      CHARTS  [label="View accuracy charts by day\nR13.1, R13.2", fillcolor="#eeeeee"];
+      HEALTH  [label="View localization health\nR14.1–R14.5"];
+      AI      [label="Explain health with AI\nR16.1"];
+      BUILDGRAPH   [label="Build route graph (nodes,\nsegments, destinations)  R2, R7", fillcolor="#fff2b3"];
+    }
+    subgraph cluster_acc {
+      label="Accounts"; style=dashed; color="#9fb3c8"; fontsize=11;
+      SIGNIN [label="Sign in with a site role\nR1.1, R1.2, R1.4", fillcolor="#eeeeee"];
+      ROLES  [label="Manage accounts and roles\nR1.3", fillcolor="#eeeeee"];
+    }
+  }
+
+  LEG [shape=none, image="", fixedsize=false, style="", label=<<table border="1" color="#999999" cellborder="0" cellspacing="2" cellpadding="3">
+    <tr><td colspan="2" align="left"><b>Legend</b></td></tr>
+    <tr><td bgcolor="#dbe9f7" width="18"> </td><td align="left">Built and deployed</td></tr>
+    <tr><td bgcolor="#fff2b3"> </td><td align="left">Partly built</td></tr>
+    <tr><td bgcolor="#eeeeee"> </td><td align="left">Planned: P1 for M4, or P2 / P3 as marked</td></tr>
+    <tr><td colspan="2" align="left">Line color = the actor who uses it</td></tr>
+    <tr><td colspan="2" align="left">- - &gt; «include» / «extend»</td></tr>
+  </table>>];
+
+  // keep the left actors left and the right actors right
+  { rank=min; V; R; LEG; }
+  { rank=max; O; D; A; N; G; }
+
+  edge [arrowhead=none];
+  edge [penwidth=1.8];
+  edge [color="#009E73"]; V -> LOC; V -> LIVE; V -> ROUTE; V -> REPORT;
+  edge [color="#E69F00"]; R -> LOC; R -> FOLLOW; R -> REPORT; R -> RUN;
+
+  edge [color="#8E44AD"]; WATCH -> O; CONFIRM -> O; CLOSE -> O; RESTRICT -> O; ROBOT -> O; HEALTH -> O; CAPTURE -> O; FAILS -> O; CHARTS -> O; SIGNIN -> O;
+  edge [color="#0072B2"]; BUILDGRAPH -> D; RUN -> D; HEALTH -> D; SIGNIN -> D;
+  edge [color="#D55E00"]; ROLES -> A; SIGNIN -> A;
+  edge [color="#777777", penwidth=1.2]; LOC -> N; AI -> G;
+
+  edge [style=dashed, arrowhead=open, constraint=false, color="#4a5a6a", penwidth=1, fontcolor="#4a5a6a"];
+  ROUTE -> LOC [label="«include»"];
+  CONFIRM -> CLOSE [label="«include»"];
+  CLOSE -> REROUTE [label="«include»"];
+  RESTRICT -> REROUTE [label="«include»"];
+  AI -> HEALTH [label="«extend»"];
+  RUN -> ATTEMPT [label="«include»"];
+  RUN -> CAPTURE [label="«include»"];
+
+  // layout helpers (invisible)
+  edge [style=invis, constraint=true, label=""];
+  R -> REROUTE;
+  V -> R;
+  R -> LEG;
+}

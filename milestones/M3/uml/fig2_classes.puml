@@ -1,0 +1,197 @@
+@startuml
+' Fig I.2 SpatialOS M3 domain class diagram (key attributes only; full fields in Data Definitions)
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam classFontSize 12
+skinparam classAttributeFontSize 10
+skinparam classBorderColor #5b7a99
+skinparam classBackgroundColor #dbe9f7
+skinparam classHeaderBackgroundColor #dbe9f7
+skinparam stereotypeCBackgroundColor #ffffff
+skinparam packageBorderColor #9fb3c8
+skinparam packageFontStyle bold
+skinparam ArrowColor #4a5a6a
+skinparam linetype polyline
+skinparam nodesep 40
+skinparam ranksep 50
+hide empty methods
+hide circle
+
+package "Map and route graph" {
+  class Site {
+    site_id: UUID
+    name: text
+    is_test_site: boolean
+  }
+  class MapVersion {
+    map_version_id: UUID
+    version_label: text
+    world_frame: WorldFrame
+    current_graph_revision: int
+    current_path_state_revision: int
+  }
+  class GraphNode {
+    node_id: UUID
+    label: text
+    position: Position, meters
+  }
+  class PathSegment {
+    segment_id: UUID
+    direction: bidirectional | start_to_end
+    distance_m: number
+    availability: open | closed
+    robot_access: allowed | restricted
+    last_state_revision: int
+  }
+  class Destination {
+    destination_id: UUID
+    name: text
+    is_active: boolean
+  }
+  class Route <<API response>> {
+    profile: human | robot
+    status: valid | unreachable
+    distance_m: number
+    graph_revision, path_state_revision
+  }
+  class RouteStep <<API response>> {
+    segment_id, from_node_id, to_node_id
+  }
+}
+
+package "Live navigation and robot proxy" {
+  class NavigationSession <<schema only, no API yet>> #fff2b3 {
+    session_id: UUID
+    agent_type: visitor | robot_proxy
+    device_id: text
+    mode: live | simulation | replay
+    status: active | ended | failed
+    user_id: UUID, optional
+    --
+    one session = one data collection run, R11.1
+  }
+  class PoseSample {
+    sample_id: UUID
+    device_id: text
+    world_position: Position
+    tracking_status: localizing | valid | lost
+    data_origin: real | synthetic
+    session_id: UUID, new in #57
+  }
+  class SimulatedAgent <<schema only, no API yet>> #fff2b3 {
+    agent_id: UUID
+    position: Position
+    current_step_index: int
+    speed_mps: number
+    state: idle | running | paused |
+      waiting_for_operator | arrived | unreachable
+  }
+  class RobotCommand <<schema only, no API yet>> #fff2b3 {
+    command_id: UUID
+    command: start | pause | resume |
+      reset | set_destination
+    status: pending | applied | rejected
+    reason: text
+  }
+}
+
+package "Localization reliability and AI" {
+  class TestPoint {
+    test_point_id: UUID
+    label: text
+    reference_position: Position
+    reference_is_verified: boolean
+    is_synthetic: boolean
+  }
+  class LocalizationAttempt {
+    attempt_id: UUID
+    device_id: text
+    mode: live | simulation
+    outcome: success | timeout | tracking_loss | ...
+    latency_ms: int
+    horizontal_error_m: number
+    error_is_valid: boolean
+    session_id: UUID, new in #57
+  }
+  class HealthResult <<computed per request>> {
+    test_point_id, device_id, mode
+    attempt_ids: UUID[]
+    success_rate: 0..1
+    median_latency_ms: number
+    median_horizontal_error_m: number
+    health_status: green | yellow | red | gray
+    reason: text
+  }
+  class HealthSummary <<API response>> {
+    status: completed | failed |
+      timed_out | unavailable
+    observations: Observation[0..6]
+    suggestions: text[0..3]
+    rejected_count: int
+    model_version, prompt_version
+  }
+}
+
+package "Operations and accounts (planned)" {
+  class PathReport <<planned M4>> #eeeeee {
+    report_id: UUID
+    reported_by: visitor | robot_proxy | staff
+    reporter_session_id: UUID
+    kind: wet_floor | blocked | other
+    status: pending | confirmed | rejected
+  }
+  class PathEvent <<planned M4>> #eeeeee {
+    event_id: UUID
+    change: close | reopen | restrict | allow
+    expected_revision: int
+    changed_at: timestamp
+  }
+  class SiteMembership <<planned M4>> #eeeeee {
+    site_id: UUID
+    role: visitor | operator |
+      developer | administrator
+  }
+  class UserAccount <<planned M4>> #eeeeee {
+    user_id: UUID, Supabase Auth
+    email: text
+  }
+}
+
+Site "1" *-- "1..*" MapVersion
+MapVersion "1" *-- "*" GraphNode
+MapVersion "1" *-- "*" PathSegment
+MapVersion "1" *-- "*" Destination
+MapVersion "1" *-- "*" TestPoint
+PathSegment "*" --> "1" GraphNode : start node
+PathSegment "*" --> "1" GraphNode : end node
+Destination "*" --> "1" GraphNode : at
+Route "1" *-- "0..*" RouteStep
+RouteStep "*" --> "1" PathSegment
+Route ..> Destination : to
+
+MapVersion "1" -- "*" NavigationSession
+NavigationSession "1" *-- "*" PoseSample
+NavigationSession "1" -- "0..1" SimulatedAgent : robot_proxy only
+NavigationSession "1" -- "*" RobotCommand
+RobotCommand "*" --> "0..1" Destination : set_destination
+SimulatedAgent ..> Route : follows (robot profile)
+
+LocalizationAttempt "*" --> "1" TestPoint
+LocalizationAttempt "0..1" --> "0..1" PoseSample : valid pose
+HealthResult ..> LocalizationAttempt : computed from
+HealthResult "*" --> "1" TestPoint
+HealthSummary ..> HealthResult : explains (numbers checked)
+
+PathReport "*" --> "1" PathSegment
+PathReport "0..1" --> "0..1" PathEvent : confirmed by
+PathEvent "*" --> "1" PathSegment
+PathEvent "*" --> "1" UserAccount : changed by
+UserAccount "1" -- "*" SiteMembership
+
+legend right
+  |<#dbe9f7> Built, deployed on main |
+  |<#fff2b3> Schema merged (PR #57), no API yet |
+  |<#eeeeee> Planned |
+  | <<API response>> / <<computed>>: not stored |
+endlegend
+@enduml

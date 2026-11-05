@@ -1,0 +1,39 @@
+%% Fig I.3 Flow 1: Visitor localizes and the live map shows position + status (R3.1, R3.2, R3.4, R4.1)
+sequenceDiagram
+    box rgba(0,158,115,0.13) Visitor
+    actor V as Visitor
+    participant P as iPhone app<br/>(Unity + NSDK)
+    end
+    box rgba(120,120,120,0.10) External
+    participant N as Niantic VPS
+    end
+    box transparent Platform
+    participant API as POST /api/poses
+    participant DB as Supabase<br/>pose_samples
+    participant L as /live page<br/>(browser)
+    end
+
+    L->>DB: read latest 50 poses for the map, subscribe to INSERTs (Realtime)
+    V->>P: open app, point camera around
+    P->>N: localize against "SFSU HSS 349 v2"
+    N-->>P: pose in the VPS map frame (PRECISE + TRACKING)
+    P->>P: PoseReporter status: localizing until the first pose,<br/>valid while tracking, lost after losing it,<br/>timeout (Retry button) if no pose 30 s after picking the site
+    loop every 0.5 s when valid, every 1 s when localizing or lost
+        P->>API: sample_id, map_version_id, device_id,<br/>tracking_status, captured_at + x-device-token,<br/>provider_pose only when valid
+        alt bad token / bad body / unpublished map
+            API-->>P: 401 or 400 (pose not stored)
+        else valid
+            API->>API: poseFields: valid keeps the position,<br/>world_position = (x, y, −z). Localizing / lost<br/>store no position. data_origin = poseOrigin(device_id)
+            API->>DB: insert (repeated sample_id is not stored twice)
+            API-->>P: 200
+            DB-->>L: Realtime INSERT event
+            L->>L: getChipLook(): green valid, yellow localizing,<br/>red lost, gray when received_at is 5 s old<br/>(server time, not the phone clock),<br/>"Timed out" after 30 s localizing
+            L->>L: move the dot only if the message has a position,<br/>otherwise keep the last real spot<br/>(label from deviceTypes: visitor / robot)
+        end
+    end
+    opt Realtime quiet for 2 s (fallback so the dot never freezes)
+        loop every 2 s, every 5 s after 10 s with no new messages
+            L->>DB: read the newest poses for the map
+            DB-->>L: rows, handled the same way as Realtime events
+        end
+    end
