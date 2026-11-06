@@ -2,7 +2,7 @@
 
 **SpatialOS** · SW Engineering CSC 648/848 · Section 06, Team 02 · Submitted September 29, 2026
 
-| | |
+| Item | Link |
 |---|---|
 | **Submitted document** | [SpatialOS_M1_Section06_Team02.pdf](SpatialOS_M1_Section06_Team02.pdf) ([.docx](SpatialOS_M1_Section06_Team02.docx)) |
 | **Next milestone** | [Milestone 2](../M2) |
@@ -18,7 +18,7 @@
 
 | Area | M1 (Sep 29) | Now | Why |
 |---|---|---|---|
-| Phone platform | Android | iPhone (Unity + Niantic Spatial SDK) | Team members with a Mac and an iPhone own the phone app |
+| Phone platform | Android | iPhone (Unity + Niantic Spatial SDK) | The two members who build the phone app have iPhones and Macs, and iPhone apps can only be built on a Mac, so iPhone was the platform we could build and test on |
 | Requirements | R1 to R18 at feature level | Atomized items with a subject, an "Applies to" (human, robot, both) and priorities 1 to 3 | Instructor feedback (Oct 8, Oct 26) |
 | Personas | Visitor, spatial developer, site operator, simulation tester | Visitor, operator, developer, administrator, each tied to an SFSU robot pilot | Instructor feedback (Oct 26) |
 | Simulated robot | Server-side simulated agent | Robot proxy phone: a second iPhone walks the robot route, and the system recalculates it | Instructor feedback (Oct 26) |

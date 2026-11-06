@@ -2,7 +2,7 @@
 
 **SpatialOS** · SW Engineering CSC 648/848 · Section 06, Team 02 · Submitted October 20, 2026
 
-| | |
+| Item | Link |
 |---|---|
 | **Final document** | [SpatialOS_M2_Section06_Team02.pdf](SpatialOS_M2_Section06_Team02.pdf) ([.docx](SpatialOS_M2_Section06_Team02.docx)) |
 | **Vertical prototype** | <https://sfsu-csc648-06-fall26-team02.vercel.app> (deployed from `main`) |

@@ -2,7 +2,7 @@
 
 **SpatialOS** · SW Engineering CSC 648/848 · Section 06, Team 02 · Demo November 3, 2026 · Appendix I submitted November 4, 2026
 
-| | |
+| Item | Link |
 |---|---|
 | **Appendix I** | [SpatialOS_M3_AppendixI_Section06_Team02.pdf](SpatialOS_M3_AppendixI_Section06_Team02.pdf) ([.docx](SpatialOS_M3_AppendixI_Section06_Team02.docx)) |
 | **Production site** | <https://sfsu-csc648-06-fall26-team02.vercel.app> (deployed from `main`) |
@@ -72,7 +72,13 @@ npm test
 npm run dev
 ```
 
-Environment variables (in `.env.local`, and in Vercel for preview and production): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DEVICE_TOKEN`, `OPERATOR_TOKEN`, `GEMINI_API_KEY` and optional `GEMINI_MODEL`. Never commit them.
+Environment variables (in `.env.local`, and in Vercel for preview and production). Never commit them.
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: public reads
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`: server writes (operator changes)
+- `DEVICE_TOKEN`: phone pose upload
+- `OPERATOR_TOKEN`: the /operator page
+- `GEMINI_API_KEY`, optional `GEMINI_MODEL`: the AI summary
 
 ## Backend schema handoff (Noah Bran)
 

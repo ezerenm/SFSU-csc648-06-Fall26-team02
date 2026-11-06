@@ -75,7 +75,14 @@ NEXT_PUBLIC_SUPABASE_URL=<project url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
 ```
 
-That is enough for the read-only pages. Server features need more variables, which are set in Vercel and only added locally when you work on them: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (operator changes), `DEVICE_TOKEN` (phone pose upload), `OPERATOR_TOKEN` (/operator), `GEMINI_API_KEY` and optional `GEMINI_MODEL` (AI summary). Never commit any of them; the service role key never goes in a `NEXT_PUBLIC_` variable.
+That is enough for the read-only pages. Server features need more variables. They are set in Vercel, and you only add them locally when you work on that feature:
+
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: operator changes
+- `DEVICE_TOKEN`: phone pose upload
+- `OPERATOR_TOKEN`: the /operator page
+- `GEMINI_API_KEY` and optional `GEMINI_MODEL`: the AI summary
+
+Never commit any of them, and never put the service role key in a `NEXT_PUBLIC_` variable.
 
 Run the dev server:
 
