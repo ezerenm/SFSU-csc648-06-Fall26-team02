@@ -9,9 +9,9 @@
 
 SpatialOS has two clients that only talk to each other through our backend: the **Unity iPhone app** (localizes with Niantic VPS and sends its pose) and the **Next.js web app** (home page list/search, `/viewer` route planning on the 3D scan, `/live` navigation with the live phone dot). Supabase PostgreSQL 17 stores all data; Supabase Realtime pushes new poses to every open `/live` page.
 
-![Figure 4.1: SpatialOS M2 system architecture](diagrams/M2_Architecture.png)
+![Figure 4.1: SpatialOS M2 system architecture](../diagrams/M2_Architecture.png)
 
-*Figure 4.1: M2 system architecture. Diagram source: `diagrams/M2_Architecture.dot`.*
+*Figure 4.1: M2 system architecture. Diagram source: `../diagrams/M2_Architecture.dot`.*
 
 | Component | Technology | Role in M2 |
 |---|---|---|
