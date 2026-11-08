@@ -63,7 +63,9 @@ on conflict (map_version_id, label) do update
 set reference_position = excluded.reference_position,
     reference_method = excluded.reference_method,
     reference_uncertainty_m = excluded.reference_uncertainty_m,
-    reference_is_verified = excluded.reference_is_verified;
+    reference_is_verified = excluded.reference_is_verified
+-- never overwrite a point that was already measured and verified (safe to re-run after Nov 10)
+where public.test_points.reference_is_verified = false;
 
 commit;
 
