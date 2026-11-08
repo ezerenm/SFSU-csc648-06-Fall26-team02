@@ -34,14 +34,21 @@ import LiveMap from "@/components/live/LiveMap";
 
 import TrackingChip from "@/components/live/TrackingChip";
 // the status chip
+
 import { useGraph } from "@/components/live/useGraph";
 // R9 graph that refreshes every 3 s so closures reroute
+
 import { pathStateKey } from "@/lib/spatial/pathState";
 // R9 fingerprint of open/closed and robot access
+
 import { pickRobotPhone, planRobotStart, robotPosition } from "@/lib/spatial/robotRoute";
 // R9.2 which phone is the simulated robot and where its route starts
+
 import { useRouteRequest } from "@/components/live/useRouteRequest";
 // R9.2 the robot route from /api/route with profile = robot
+
+import { addSampleIfNew, EMPTY_COUNTS, getCaptureStatus, type CaptureCounts } from "@/lib/spatial/captureStatus";
+// R12.3 live capture status and counts
 
 import RoutePlanner from "@/components/viewer/RoutePlanner";
 // the existing 3d viewer with its route, used for the 3d tab
@@ -101,6 +108,15 @@ export default function LivePage() {
 
   const [robotStartId, setRobotStartId] = useState<string | null>(null);
   // R9.2 the node the robot route starts from
+
+  const [runIsActive, setRunIsActive] = useState(false);
+  // R12.3 true between Start and Stop
+
+  const [captureCounts, setCaptureCounts] = useState<CaptureCounts>(EMPTY_COUNTS);
+  // R12.3 the number of samples, attempts, and failures
+
+  const [lastCountedSampleId, setLastCountedSampleId] = useState<string | null>(null);
+  // R12.3 the last counts we sent to the server, so we dont send the same ones again
 
   const { phones, nowMs, liveError } = useLivePhones(MAP_VERSION_ID);
   // each phones newest message
@@ -369,6 +385,47 @@ export default function LivePage() {
 
   // Robot route end ------------------
 
+  // Live capture ---------------------
+
+  const captureStatus = getCaptureStatus(runIsActive, robotPhone, robotTrackingColor);
+  // what the capture badge says
+
+  const newestRobotSampleId = robotPhone === null ? null : robotPhone.latestMessage.sample_id;
+  // the robots most recent message
+
+  if (runIsActive && newestRobotSampleId !== lastCountedSampleId) {
+
+    setCaptureCounts(addSampleIfNew(captureCounts, newestRobotSampleId, lastCountedSampleId));
+    // count the new message
+
+    setLastCountedSampleId(newestRobotSampleId);
+    // remember it so it cannot be counted twice
+
+  }
+
+  function toggleRun() {
+
+    // TODO: noahs run api
+
+    if (runIsActive) {  
+
+      setRunIsActive(false);
+      // stop = the counts stay on the screen as a record of what was captured
+
+  } else {
+
+    setCaptureCounts(EMPTY_COUNTS);
+    setLastCountedSampleId(newestRobotSampleId);
+    setRunIsActive(true);
+    // restart fresh and skip the message that was already there
+
+    
+  }
+}
+
+
+  // Live capture end -----------------
+
   // Status chip text -----------------
 
   let chipText = "";
@@ -492,6 +549,30 @@ export default function LivePage() {
 
                               </div>
 
+                              <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+
+                                  <button type="button" onClick={toggleRun}
+                                      className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
+                                      {runIsActive ? "Stop run" : "Start run"}
+                                  </button>
+                                  {/* R12.3 starting or stopping data collection run */}
+
+                                  <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
+
+                                      {captureStatus.label}
+
+                                  </span>
+                                  {/* Capturing the data and waiting for the robot phone */}
+
+                                  <span className="text-purple-200">
+
+                                    Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
+
+                                  </span>
+                                  {/* Noah's run api */}
+
+                              </div>
+
                               {graph && (
                                 <LiveMap
                                   graph={graph}
@@ -501,7 +582,9 @@ export default function LivePage() {
                                   robotRoutePoints={robotRoutePoints}
                                   destinationNode={destinationNode}
                                   attachLine={attachment !== null && livePosition !== null ? { from: livePosition, to: attachment.attachPoint } : null}
-                                  highlightedDeviceId={navigationPhone === null ? null : navigationPhone.deviceId}
+                                  highlightedDeviceId={navigationPhone === null ? null : navigationPhone.deviceId} 
+                                  
+                                  capturingDeviceId={captureStatus.isCapturing && robotPhone !== null ? robotPhone.deviceId : null}
 
                                 />
                       
