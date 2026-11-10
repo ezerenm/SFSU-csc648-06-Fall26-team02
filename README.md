@@ -7,7 +7,7 @@ CSC 648/848 Software Engineering, Section 06, Team 02 (Fall 2026)
 - **Live site:** https://sfsu-csc648-06-fall26-team02.vercel.app
 - **About page:** https://sfsu-csc648-06-fall26-team02.vercel.app/about
 - **M3 task board:** https://github.com/users/tduong64/projects/1
-- **Current milestone:** [M3](milestones/M3/README.md) (Appendix I submitted Nov 4, 2026)
+- **Current milestone:** [M3](milestones/M3) (Appendix I submitted Nov 4, 2026)
 
 ## Team
 
@@ -75,7 +75,14 @@ NEXT_PUBLIC_SUPABASE_URL=<project url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
 ```
 
-That is enough for the read-only pages. Server features need more variables, which are set in Vercel and only added locally when you work on them: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (operator changes), `DEVICE_TOKEN` (phone pose upload), `OPERATOR_TOKEN` (/operator), `GEMINI_API_KEY` and optional `GEMINI_MODEL` (AI summary). Never commit any of them; the service role key never goes in a `NEXT_PUBLIC_` variable.
+That is enough for the read-only pages. Server features need more variables. They are set in Vercel, and you only add them locally when you work on that feature:
+
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: operator changes
+- `DEVICE_TOKEN`: phone pose upload
+- `OPERATOR_TOKEN`: the /operator page
+- `GEMINI_API_KEY` and optional `GEMINI_MODEL`: the AI summary
+
+Never commit any of them, and never put the service role key in a `NEXT_PUBLIC_` variable.
 
 Run the dev server:
 
@@ -147,8 +154,8 @@ Supabase PostgreSQL with Row Level Security on every table. Schema changes are o
 |---|---|
 | [M0](milestones/M0) | Team setup report |
 | [M1](milestones/M1) | Requirements, personas, competitive analysis |
-| [M2](milestones/M2/README.md) | M2 document, vertical prototype, backend handoff, contracts, seed data |
-| [M3](milestones/M3/README.md) | Appendix I (feedback and action plan, frozen P1 list, UML, risks), UML sources, M3 backend handoff |
+| [M2](milestones/M2) | M2 document, vertical prototype, backend handoff, contracts, seed data |
+| [M3](milestones/M3) | Appendix I (feedback and action plan, frozen P1 list, UML, risks), UML sources, M3 backend handoff |
 | M4, M5 | Upcoming |
 
 ## Deployment
