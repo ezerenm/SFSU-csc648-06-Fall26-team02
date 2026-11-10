@@ -21,14 +21,14 @@ const MAP_VERSION_ID = 'b2000000-0000-4000-8000-000000000001';
 // HSS 349 map version (same one /live uses)
 // M2: hardcoded. M3: look it up from the site's active_map_version_id
 
-const MODEL_URL = '/models/hss349-v2.glb';
-// HSS 349 v2 mesh exported from Scaniverse / Niantic
-// textures resized 3072 -> 2048px WebP so it loads fast and phones don't run out of GPU memory (14.5 MB -> 4.9 MB)
+const MODEL_URL = '/models/hss349-v3.glb';
+// HSS 349 v3 mesh (whole room, scanned and set to Production on Nov 5, 2026)
+// textures resized 3072 -> 2048px JPEG so it loads fast and phones don't run out of GPU memory (9.8 MB -> 5.1 MB)
 // the mesh is already in the same VPS frame as the graph nodes, so no alignment transform
 
-const FLOOR_Y = -1.29;
-// floor height in the VPS frame, measured from the scan (median under all 4 nodes, spread +-3 cm)
-// node y = 0 is the phone's height when the nodes were recorded
+const FLOOR_Y = -1.51;
+// floor height in the v3 VPS frame, measured from the scan (most common floor height in the room, spread +-4 cm)
+// v3 nodes are floor positions from tape measurements with y = 0, so the viewer moves them down onto the floor
 
 // ----------------------------------------------------------------------------
 

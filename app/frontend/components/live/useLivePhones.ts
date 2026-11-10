@@ -34,6 +34,10 @@ export const SLOW_POLL_AFTER_MS = 10000;
 export const SLOW_POLL_EVERY_MS = 5000;
 // we check the database every 5 seconds
 
+export const LIVE_WINDOW_MS = 10 * 60 * 1000;
+// /live only reads samples from the last 10 minutes
+// older samples (like v2-frame poses on the same map id) stay out of the live map
+
 const CLOCK_TICK_MS = 500;
 // how often we update "now"
 // chip status timing
@@ -127,13 +131,16 @@ export function useLivePhones(mapVersionId: string) {
             isLoading = true;
             // making it known that we're reading
 
+            const since = new Date(Date.now() - LIVE_WINDOW_MS).toISOString();
+            // only recent samples
+
             const newestMessages = await supabase.from("pose_samples")
-            .select(PHONE_COLUMNS).eq("map_version_id", mapVersionId).order("captured_at", { ascending: false }).limit(50);
+            .select(PHONE_COLUMNS).eq("map_version_id", mapVersionId).gte("captured_at", since).order("captured_at", { ascending: false }).limit(50);
             // the 50 newest messages
             // for status chips
 
             const newestPositions = await supabase.from("pose_samples")
-            .select(PHONE_COLUMNS).eq("map_version_id", mapVersionId).not("world_position", "is", null).order("captured_at", { ascending: false }).limit(20);
+            .select(PHONE_COLUMNS).eq("map_version_id", mapVersionId).gte("captured_at", since).not("world_position", "is", null).order("captured_at", { ascending: false }).limit(20);
             // the 20 newest messages that have a position
             // for dots
 
