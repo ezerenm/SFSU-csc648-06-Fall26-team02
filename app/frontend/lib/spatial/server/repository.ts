@@ -3,11 +3,16 @@ import type { AttemptFilters, GraphResponse, LocalizationAttempt } from "../cont
 import type { HealthAttempt, HealthMode } from "../health";
 import { ApiError } from "./errors";
 
+import { FAILURE_TYPES, STATUS_LOOKBACK_SECONDS, dayRange, trackingStatusBefore, type FailureFilters, type FailureRow, type StatusSample } from "../failures";
+
 export interface SpatialRepository {
   graph(mapVersionId: string): Promise<GraphResponse | null>;
   attempts(filters: AttemptFilters): Promise<{ items: LocalizationAttempt[]; total: number }>;
   /** Completed attempts of one mode on one map, for health (R14). RLS decides what is visible. */
   healthAttempts(mapVersionId: string, mode: HealthMode): Promise<HealthAttempt[]>;
+
+  // R12.4 
+  failures(filters: FailureFilters): Promise<{ items: FailureRow[]; total: number}>;
 }
 
 const ATTEMPT_COLUMNS = "attempt_id,map_version_id,test_point_id,device_id,sdk_version,mode,data_origin,condition_label,camera_direction,started_at,ended_at,outcome,latency_ms,failure_reason,horizontal_error_m,error_is_valid,received_at,test_point:test_points!inner(label)";
@@ -15,6 +20,17 @@ const ATTEMPT_COLUMNS = "attempt_id,map_version_id,test_point_id,device_id,sdk_v
 const HEALTH_COLUMNS = "attempt_id,test_point_id,map_version_id,device_id,mode,outcome,latency_ms,horizontal_error_m,error_is_valid";
 /** PostgREST's default max rows. Plenty for one map in this course; raise with a DB-side aggregate if it ever binds. */
 export const HEALTH_ATTEMPT_LIMIT = 1000;
+
+const FAILURE_COLUMNS = "attempt_id,outcome,failure_reason,test_point_id,device_id,started_at,ended_at,mode,data_origin,test_point:test_points!inner(label)";
+// the columns we need and the test point's label from the test_points table
+
+type FailureDatabaseRow = {
+
+  attempt_id: string; outcome: string; failure_reason: string | null; test_point_id: string; device_id: string;
+  // the columns and test point's label from the test_points table
+
+  started_at: string; ended_at: string | null; mode: string; data_origin: string; test_point: { label: string };
+}
 
 function databaseUnavailable(): never {
   throw new ApiError(503, "DATABASE_UNAVAILABLE", "Demo data is temporarily unavailable. Please try again.");
@@ -72,6 +88,105 @@ export function supabaseRepository(client: SupabaseClient): SpatialRepository {
         if (error) databaseUnavailable();
         return (data ?? []) as HealthAttempt[];
       } catch { databaseUnavailable(); }
+    },
+    async failures(filters) {
+
+      try {
+
+        let request = client.from("localization_attempts")
+
+        .select(FAILURE_COLUMNS, { count: "exact" })
+        .eq("map_version_id", filters.map_version_id)
+        .order("started_at", { ascending: false })
+        .order("attempt_id", { ascending: true })
+
+        // newest first
+
+        if (filters.failure_type) request = request.eq("outcome", filters.failure_type);
+        else request = request.in("outcome", FAILURE_TYPES);
+        // one type or all 6 failure types
+
+        if (filters.test_point_id) request = request.eq("test_point_id", filters.test_point_id);
+        if (filters.device_id) request = request.eq("device_id", filters.device_id);
+        
+        if (filters.date) {
+
+          const range = dayRange(filters.date)!;
+
+          request = request.gte("started_at", range.startIso).lt("started_at", range.endIso);
+          // midnight to mignight pST
+        }
+
+        const { data, error, count } = await request.range(filters.offset, filters.offset + filters.limit - 1)
+          .abortSignal(AbortSignal.timeout(5000));
+
+          if (error || count === null) databaseUnavailable();
+
+          const rows = (data ?? []) as unknown as FailureDatabaseRow[];
+          if (rows.length === 0) return { items: [], total: count };
+
+          // read pose samples around fialures for "tracking status before"
+
+          const deviceIds: string[] = [];
+
+          let earliest = rows[0].started_at;
+          
+          let latest = rows[0].started_at;
+
+          for (const row of rows) {
+
+            if (!deviceIds.includes(row.device_id)) deviceIds.push(row.device_id);
+            
+            if (row.started_at < earliest) earliest = row.started_at;
+
+            if (row.started_at > latest) latest = row.started_at;
+
+        }
+        // which phones and which time window this page has
+
+        const from = new Date(new Date(earliest).getTime() - STATUS_LOOKBACK_SECONDS * 1000).toISOString();
+        // one minute before the earliest failure
+
+        const samples = await client.from("pose_samples")
+          .select("device_id,tracking_status,captured_at")
+          .eq("map_version_id", filters.map_version_id)
+          .in("device_id", deviceIds)
+          .gte("captured_at", from)
+          .lte("captured_at", latest)
+          .range(0, HEALTH_ATTEMPT_LIMIT - 1)
+          .abortSignal(AbortSignal.timeout(5000));
+
+        const statusSamples = samples.error ? [] : (samples.data ?? []) as StatusSample[];
+        // if the pose read fails, the list will still show, but the status column will be empty
+
+        const items: FailureRow[] = [];
+
+        for (const row of rows) {
+
+          items.push({
+
+            attempt_id: row.attempt_id,
+            failure_type: row.outcome,
+            failure_reason: row.failure_reason,
+            test_point_id: row.test_point_id,
+            test_point_label: row.test_point.label,
+            device_id: row.device_id,
+            started_at: row.started_at,
+            ended_at: row.ended_at,
+            mode: row.mode,
+            data_origin: row.data_origin,
+            tracking_status_before: trackingStatusBefore(statusSamples, row.device_id, row.started_at),
+
+          });
+        }
+
+        return { items, total: count };
+        
+      } catch (error) {
+
+        if (error instanceof ApiError) throw error;
+        databaseUnavailable();
+      }
     },
   };
 }
