@@ -32,7 +32,7 @@ CSC 648/848 Software Engineering, Section 06, Team 02 (Fall 2026)
 | Styling | Tailwind CSS |
 | Backend | Next.js API routes on Node.js 22 (Vercel serverless) |
 | Database | Supabase (PostgreSQL 17) |
-| Auth | Supabase Auth (accounts and roles planned, R1) |
+| Auth | Supabase Auth with per-site roles (M4 feature branch; rollout pending) |
 | AI | Google Gemini API (REST, gemini-flash-lite) |
 | 3D viewer | Three.js |
 | Phone app | Unity 6000.3.14f1 + Niantic Spatial SDK 4.1.0 (iPhone) |
@@ -77,9 +77,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
 
 That is enough for the read-only pages. Server features need more variables. They are set in Vercel, and you only add them locally when you work on that feature:
 
-- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: operator changes
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: server-only phone writes
 - `DEVICE_TOKEN`: phone pose upload
-- `OPERATOR_TOKEN`: the /operator page
 - `GEMINI_API_KEY` and optional `GEMINI_MODEL`: the AI summary
 
 Never commit any of them, and never put the service role key in a `NEXT_PUBLIC_` variable.
@@ -107,7 +106,8 @@ The iPhone app has its own setup guide in [app/phone/README.md](app/phone/README
 | `/` | Home: list and search localization attempts, destinations and path segments |
 | `/viewer` | 3D model of the scanned area with nodes, segments, destinations and routes |
 | `/live` | 2D live map: phones with status chips, visitor and simulated robot routes, rerouting |
-| `/operator` | Live map plus Close, Reopen, Humans only and Allow robots for each path segment (operator token) |
+| `/account` | Supabase sign-up, sign-in, site roles and administrator role management (M4 rollout pending) |
+| `/operator` | Live map plus Close, Reopen, Humans only and Allow robots for each path segment (operator or administrator login) |
 | `/health` | Localization health per test point and Explain with AI |
 | `/about`, `/about/<name>` | Team pages from the `team_members` table |
 
@@ -116,10 +116,11 @@ The iPhone app has its own setup guide in [app/phone/README.md](app/phone/README
 | `POST /api/poses` | Phone pose and tracking status upload (device token) |
 | `GET /api/graph?map_version_id=<uuid>` | Nodes, segments, destinations and test points of a public map |
 | `GET /api/localization-attempts?map_version_id=<uuid>` | Attempt list and search with point and outcome filters |
+| `POST /api/localization-attempts` | Live phone attempt ingestion using `x-device-token`; M4 feature branch, rollout pending |
 | `POST /api/route` | Shortest route (Dijkstra) for the human or robot profile |
 | `GET /api/health?map_version_id=<uuid>` | Health per test point and device |
 | `POST /api/health/summary` | Gemini summary of the health results, numbers checked |
-| `PATCH /api/segments` | Operator segment change (operator token, 409 on a conflicting change) |
+| `PATCH /api/segments` | Operator segment change (Supabase user token and per-site RLS, 409 on a conflicting change; M4 rollout pending) |
 | `GET /api/team` | Team data from Supabase |
 
 ## Git Workflow

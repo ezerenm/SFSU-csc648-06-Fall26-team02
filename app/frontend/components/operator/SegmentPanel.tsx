@@ -7,14 +7,14 @@ import { describeSegmentState, type SegmentAction } from "@/lib/spatial/segmentC
 type Props = {
   segments: PathSegment[];
   nodeName: (nodeId: string) => string;
-  token: string;
+  accessToken: string;
 };
 
 const button = "rounded-md px-2.5 py-1 text-xs font-semibold disabled:opacity-40";
 
 // One row per path segment with the operator's buttons (R8.1, R8.2, R17.1).
 // The list updates from the graph poll, so it shows what the database says, not what was clicked.
-export default function SegmentPanel({ segments, nodeName, token }: Props) {
+export default function SegmentPanel({ segments, nodeName, accessToken }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ export default function SegmentPanel({ segments, nodeName, token }: Props) {
     try {
       const response = await fetch("/api/segments", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-operator-token": token },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ segment_id: segment.segment_id, action }),
       });
       const body = await response.json().catch(() => ({}));
@@ -41,10 +41,10 @@ export default function SegmentPanel({ segments, nodeName, token }: Props) {
   return (
     <div className="space-y-2">
       {message && <p className="rounded-md bg-white/10 px-3 py-2 text-sm" role="status">{message}</p>}
-      {!token && <p className="text-sm text-yellow-300">Enter the operator token to make changes.</p>}
+      {!accessToken && <p className="text-sm text-yellow-300">Sign in with an operator or administrator role to make changes.</p>}
       <ul className="space-y-2">
         {sorted.map((segment) => {
-          const busy = busyId === segment.segment_id || !token;
+          const busy = busyId === segment.segment_id || !accessToken;
           const closed = segment.availability === "closed";
           const restricted = segment.robot_access === "restricted";
           return (

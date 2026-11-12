@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { applySegmentAction, describeSegmentState, isSegmentAction } from "../lib/spatial/segmentChange";
-import { tokenMatches } from "../lib/spatial/server/token";
 
 const open = { availability: "open", robot_access: "allowed" } as const;
 
@@ -32,13 +31,4 @@ test("only the four actions are accepted", () => {
 test("segment state reads in plain words", () => {
   assert.equal(describeSegmentState(open), "Open . robots allowed");
   assert.equal(describeSegmentState({ availability: "closed", robot_access: "restricted" }), "Closed . humans only");
-});
-
-test("operator token must match exactly and must be configured", () => {
-  assert.ok(tokenMatches("secret-1", "secret-1"));
-  assert.ok(!tokenMatches("secret-2", "secret-1"));
-  assert.ok(!tokenMatches("secret", "secret-1"));
-  assert.ok(!tokenMatches(null, "secret-1"));
-  assert.ok(!tokenMatches("secret-1", undefined));
-  assert.ok(!tokenMatches("", ""));
 });
