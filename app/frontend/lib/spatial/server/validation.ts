@@ -1,6 +1,8 @@
 import { OUTCOMES, type AttemptFilters, type Outcome, type RouteRequest } from "../contracts";
 import { ApiError } from "./errors";
 
+import { dayRange, isFailureType, type FailureFilters } from "../failures";
+
 export function invalid(message: string): never {
   throw new ApiError(400, "INVALID_REQUEST", message);
 }
@@ -92,3 +94,55 @@ export async function routeRequest(request: Request): Promise<RouteRequest> {
     profile: value.profile,
   };
 }
+
+// R12.4 filters for GET /api/failures
+
+export function failureFilters(request: Request): FailureFilters {
+
+  const params = query(request, ["map_version_id", "failure_type", "test_point_id", "device_id", "date", "limit", "offset" ]);
+  // only these parameters are allowed
+
+const filters: FailureFilters = {
+
+  map_version_id: uuid(params.get("map_version_id"), "map_version_id"),
+  limit: integer(params.get("limit"), "limit", 50, 1, 100), 
+  offset: integer(params.get("offset"), "offset", 0, 0, 10000),
+
+};
+// the map is required
+
+if (params.has("failure_type")) {
+
+  const failureType = params.get("failure_type")!;
+
+  if (!isFailureType(failureType)) invalid("failure_type must be timeout, tracking_loss, network_error, map_mismatch, cancelled, or other_failure.");
+
+  filters.failure_type = failureType;
+
+}
+
+if (params.has("test_point_id")) filters.test_point_id = uuid(params.get("test_point_id"), "test_point_id");
+
+if (params.has("device_id")) {
+
+  const deviceId = params.get("device_id")!.trim();
+
+  if (deviceId.length < 1 || deviceId.length > 120) invalid("device_id must contain 1 to 120 characters.");
+
+  filters.device_id = deviceId;
+
+}
+
+if (params.has("date")) {
+
+  const date = params.get("date")!;
+
+  if (dayRange(date) === null) invalid("date must be a real day written as YYYY-MM-DD format.");
+
+  filters.date = date;
+
+}
+
+return filters;
+}
+

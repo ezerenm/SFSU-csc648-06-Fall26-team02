@@ -25,6 +25,7 @@ function api(attempts: HealthAttempt[] = [], seen: HealthMode[] = []) {
     graph: async (value) => value === map ? structuredClone(graph) : null,
     attempts: async () => ({ items: [], total: 0 }),
     healthAttempts: async (_id, mode) => { seen.push(mode); return attempts.filter((a) => a.mode === mode); },
+    failures: async () => ({ items: [], total: 0 }),
   };
   return createHandlers(() => repository);
 }
