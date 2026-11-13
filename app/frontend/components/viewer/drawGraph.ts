@@ -12,6 +12,9 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import type { Destination, GraphNode, PathSegment, Position } from '@/lib/spatial/contracts';
 // the real API data types (same field names the database uses)
 
+import { segmentColor } from '@/lib/spatial/segmentStyle';
+// R8.3 
+
 // ======--------------------------------------------------------------------
 
 
@@ -71,8 +74,9 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
         const points = segment.geometry.map((point) => toVector(point, 0.1, floorY));
         // path points
 
-        const lineColor = segment.availability === 'closed' ? 'red' : 'lime';
-        // red if closed, green if open
+        const lineColor = segmentColor(segment);
+        // red if closed and pink if human only
+        // green is open
 
         const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: lineColor, depthTest: false }));
         // the line
