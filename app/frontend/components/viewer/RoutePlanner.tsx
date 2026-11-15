@@ -26,6 +26,9 @@ const MODEL_URL = '/models/hss349-v3.glb';
 // textures resized 3072 -> 2048px JPEG so it loads fast and phones don't run out of GPU memory (9.8 MB -> 5.1 MB)
 // the mesh is already in the same VPS frame as the graph nodes, so no alignment transform
 
+const SPLAT_URL = '/models/hss349-v3.spz';
+// HSS 349 v3 Gaussian splat
+
 const FLOOR_Y = -1.51;
 // floor height in the v3 VPS frame, measured from the scan (most common floor height in the room, spread +-4 cm)
 // v3 nodes are floor positions from tape measurements with y = 0, so the viewer moves them down onto the floor
@@ -170,6 +173,8 @@ export default function RoutePlanner() {
                 <SceneViewer
 
                 modelUrl={MODEL_URL}
+
+                splatUrl={SPLAT_URL}
 
                 floorY={FLOOR_Y}
 
