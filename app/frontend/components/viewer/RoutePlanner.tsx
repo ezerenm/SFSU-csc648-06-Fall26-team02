@@ -60,6 +60,10 @@ export default function RoutePlanner() {
     const [profile, setProfile] = useState<Profile>('human');
     // picking human or robot
 
+    const [showSplat, setShowSplat] = useState(false);
+    // false = mesh
+    // true = splat
+
     const [routeState, setRouteState] = useState<RouteState | null>(null);
     // empty until a route is found
 
@@ -174,7 +178,7 @@ export default function RoutePlanner() {
 
                 modelUrl={MODEL_URL}
 
-                splatUrl={SPLAT_URL}
+                splatUrl={showSplat ? SPLAT_URL : null}
 
                 floorY={FLOOR_Y}
 
@@ -264,6 +268,11 @@ export default function RoutePlanner() {
                                 {/*simulated tag*/}
                             </label>
                         </fieldset>
+
+                        <label className="flex items-center gap-2">
+                            <input type="checkbox" className="accent-yellow-400" checked={showSplat} onChange={(event) => setShowSplat(event.target.checked)} />
+                            Splat 
+                        </label>
 
                         <button type="button" className="rounded-md bg-yellow-400 py-2 font-semibold text-gray-900 hover:bg-yellow-300 disabled:opacity-50" onClick={doFindRoute} disabled={!graph || isLoading}>
                             {/*yellow button with dark text for readability*/}

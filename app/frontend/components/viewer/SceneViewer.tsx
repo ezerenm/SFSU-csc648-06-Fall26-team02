@@ -287,6 +287,9 @@ export default function SceneViewer({ modelUrl, splatUrl = null, floorY, onModel
 
                 splatReady = true;
 
+                renderer.setPixelRatio(1);
+                // drawing splat on normal resolution
+
                 if (model !== null) model.visible = false;
                 // hide the mesh
                 // splat shows the same room

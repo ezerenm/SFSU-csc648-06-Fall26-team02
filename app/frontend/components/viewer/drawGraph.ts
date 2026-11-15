@@ -48,7 +48,7 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
 
     for (const node of nodes) {
 
-        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18), new THREE.MeshBasicMaterial({ color: 'white', depthTest: false }));
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18), new THREE.MeshBasicMaterial({ color: 'white', depthTest: false, transparent: true }));
         // depthTest false = desks and chairs in the scan can't hide the dots
 
         ball.position.copy(toVector(node.position, 0.3, floorY));
@@ -74,7 +74,7 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
         const lineColor = segment.availability === 'closed' ? 'red' : 'lime';
         // red if closed, green if open
 
-        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: lineColor, depthTest: false }));
+        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: lineColor, depthTest: false, transparent: true }));
         // the line
 
         line.renderOrder = 5;
