@@ -63,7 +63,8 @@ and data. A reused ID with different data returns 409. New rows return 201.
 The insert and pose association happen in one database transaction.
 
 For a success, the function selects the first real, valid pose for the same map
-and device whose `captured_at` falls between `started_at` and `ended_at`. It
+and device whose `captured_at` falls between the reported success time
+(`started_at + latency_ms`) and `ended_at`. It
 links that pose to the attempt. If the test point has a verified reference, it
 calculates horizontal X/Z distance in meters, stores the pose ID and error, and
 sets `error_is_valid`. An unverified point or missing qualifying pose leaves
@@ -78,6 +79,10 @@ creation and linking remain a separate integration task. The v3 test-point
 migration is merged into `dev`; confirm it was applied to the target Supabase
 database before real phone tries are sent.
 
+The existing data definition limits a successful localization to 30 seconds.
+The phone should set `ended_at` and `latency_ms` from the localization result,
+not from the later network upload; an upload delay does not extend the attempt.
+
 ## Verification and rollout
 
 The migration was applied only to a disposable local PostgreSQL database. Run
@@ -86,8 +91,9 @@ after the M2 seed and M3 migration. It tests profile creation, anonymous and
 visitor denial, cross-site denial, operator and administrator access, role
 promotion rules, revision changes, and preservation of robot restrictions.
 [`m4_attempt_ingestion.sql`](../../app/backend/tests/m4_attempt_ingestion.sql)
-tests first-pose selection, measured error, retry idempotency, ID collisions,
-and failure storage using a rolled-back real-point fixture. Both SQL tests
+tests success-time pose selection, measured error, retry idempotency, a late
+pose linked on retry, ID collisions, and failure storage using a rolled-back
+real-point fixture. Both SQL tests
 passed locally on PostgreSQL 15; shared Supabase integration remains untested.
 
 The application routes and both migrations must reach the same environment

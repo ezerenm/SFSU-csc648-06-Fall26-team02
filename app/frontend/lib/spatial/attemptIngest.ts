@@ -1,5 +1,7 @@
+import { OUTCOMES, type Outcome } from "./contracts";
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const FAILURES = new Set(["timeout", "tracking_loss", "network_error", "map_mismatch", "cancelled", "other_failure"]);
+const FAILURES = new Set<string>(OUTCOMES.filter((outcome) => outcome !== "success" && outcome !== "in_progress"));
 
 export type LiveAttempt = {
   attempt_id: string;
@@ -13,7 +15,7 @@ export type LiveAttempt = {
   camera_direction: string;
   started_at: string;
   ended_at: string;
-  outcome: string;
+  outcome: Exclude<Outcome, "in_progress">;
   failure_reason: string | null;
   latency_ms: number | null;
 };
@@ -77,7 +79,7 @@ export function parseLiveAttempt(body: unknown): Parsed {
     camera_direction: (body.camera_direction as string).trim(),
     started_at: new Date(body.started_at).toISOString(),
     ended_at: new Date(body.ended_at).toISOString(),
-    outcome: body.outcome as string,
+    outcome: body.outcome as Exclude<Outcome, "in_progress">,
     failure_reason: failure as string | null,
     latency_ms: latency as number | null,
   } };

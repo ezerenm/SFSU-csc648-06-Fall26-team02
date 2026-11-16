@@ -38,7 +38,12 @@ insert into public.pose_samples (
   'b7000000-0000-4000-8000-000000000094',
   'b2000000-0000-4000-8000-000000000001', 'test-phone',
   '{}', '{"x_m":2,"y_m":0,"z_m":2}', 'valid', 'real',
-  '2026-11-10T10:00:10Z'
+  '2026-11-10T10:00:11.200Z'
+), (
+  'b7000000-0000-4000-8000-000000000095',
+  'b2000000-0000-4000-8000-000000000001', 'test-phone',
+  '{}', '{"x_m":6,"y_m":0,"z_m":8}', 'valid', 'real',
+  '2026-11-10T10:00:04.200Z'
 );
 
 set local role anon;
@@ -68,9 +73,9 @@ declare
 begin
   result := public.m4_record_live_attempt(request);
   if result->>'created' <> 'true' or result->>'error_is_valid' <> 'true'
-    or abs((result->>'horizontal_error_m')::float8 - sqrt(2.0)) > 0.000001
-    or result->>'valid_pose_sample_id' <> 'b7000000-0000-4000-8000-000000000091'
-  then raise exception 'first real valid pose and horizontal error were not saved'; end if;
+    or abs((result->>'horizontal_error_m')::float8 - 10.0) > 0.000001
+    or result->>'valid_pose_sample_id' <> 'b7000000-0000-4000-8000-000000000095'
+  then raise exception 'pose before success was used or horizontal error was wrong'; end if;
   result := public.m4_record_live_attempt(request);
   if result->>'created' <> 'false' then raise exception 'retry was not idempotent'; end if;
   if (select count(*) from public.localization_attempts
@@ -103,6 +108,29 @@ begin
     or result->>'error_is_valid' <> 'false'
     or result->>'horizontal_error_m' is not null
   then raise exception 'unverified point incorrectly gained a measured error'; end if;
+
+  request := request || jsonb_build_object(
+    'attempt_id', 'b8000000-0000-4000-8000-000000000094',
+    'test_point_id', 'b6000000-0000-4000-8000-000000000091',
+    'started_at', '2026-11-10T10:00:20Z', 'ended_at', '2026-11-10T10:00:25Z',
+    'latency_ms', 4000
+  );
+  result := public.m4_record_live_attempt(request);
+  if result->>'created' <> 'true' or result->>'error_is_valid' <> 'false'
+  then raise exception 'success without uploaded pose was not saved'; end if;
+  insert into public.pose_samples (
+    sample_id, map_version_id, device_id, provider_pose, world_position,
+    tracking_status, data_origin, captured_at
+  ) values (
+    'b7000000-0000-4000-8000-000000000096',
+    'b2000000-0000-4000-8000-000000000001', 'test-phone',
+    '{}', '{"x_m":0,"y_m":0,"z_m":2}', 'valid', 'real',
+    '2026-11-10T10:00:24.100Z'
+  );
+  result := public.m4_record_live_attempt(request);
+  if result->>'created' <> 'false' or result->>'error_is_valid' <> 'true'
+    or abs((result->>'horizontal_error_m')::float8 - 2.0) > 0.000001
+  then raise exception 'retry did not link a late-arriving pose'; end if;
 end;
 $$;
 

@@ -64,11 +64,15 @@ begin
   end if;
 
   -- The phone sends the attempt after the try, so poses can be stored first
-  -- with no attempt_id. Never use a fake pose or one from another map/device.
+  -- with no attempt_id. A valid pose from earlier in the try may belong to the
+  -- previous localization; only samples captured at or after the reported
+  -- success time may supply this attempt's measured error.
   if v_existing.outcome = 'success' and v_existing.valid_pose_sample_id is null then
     select * into v_pose from public.pose_samples p
     where p.map_version_id = v_map_id and p.device_id = v_existing.device_id
-      and p.captured_at between v_existing.started_at and v_existing.ended_at
+      and p.captured_at between
+        v_existing.started_at + v_existing.latency_ms * interval '1 millisecond'
+        and v_existing.ended_at
       and p.tracking_status = 'valid' and p.data_origin = 'real'
       and p.world_position is not null
       and (p.attempt_id is null or p.attempt_id = v_id)
