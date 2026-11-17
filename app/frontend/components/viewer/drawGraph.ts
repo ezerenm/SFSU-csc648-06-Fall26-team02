@@ -74,8 +74,17 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
         const lineColor = segment.availability === 'closed' ? 'red' : 'lime';
         // red if closed, green if open
 
-        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: lineColor, depthTest: false, transparent: true }));
-        // the line
+        if (points.length < 2) continue;
+        // need at least two points to make a tube
+
+        const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0);
+        // a path through the hallway points
+        // 0 = no rounding at corners
+
+        const tube = new THREE.TubeGeometry(curve, points.length * 8, 0.03, 6, false);
+        // wrapping a tube around the path
+
+        const line = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: lineColor, depthTest: false, transparent: true }))
 
         line.renderOrder = 5;
 
