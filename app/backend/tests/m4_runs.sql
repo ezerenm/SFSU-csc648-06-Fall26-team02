@@ -18,9 +18,6 @@ update public.site_memberships set role = 'developer'
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a9000000-0000-4000-8000-000000000001', true);
-select pg_temp.assert_true(not exists (
-  select 1 from public.navigation_sessions where device_id = 'm4-run-test-phone'
-), 'visitor cannot read runs');
 do $$ begin
   begin
     insert into public.navigation_sessions(user_id, site_id, map_version_id,
@@ -44,6 +41,11 @@ values ('a9000000-0000-4000-8000-000000000002',
 select pg_temp.assert_true((select count(*) = 1 from public.navigation_sessions
   where device_id = 'm4-run-test-phone' and device_model is null),
   'developer starts a run without inventing a device model');
+select set_config('request.jwt.claim.sub', 'a9000000-0000-4000-8000-000000000001', true);
+select pg_temp.assert_true((select count(*) = 0 from public.navigation_sessions
+  where device_id = 'm4-run-test-phone'),
+  'visitor cannot read an existing run');
+select set_config('request.jwt.claim.sub', 'a9000000-0000-4000-8000-000000000002', true);
 do $$ begin
   begin
     insert into public.navigation_sessions(user_id, site_id, map_version_id,
