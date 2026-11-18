@@ -24,11 +24,20 @@ import { buildGraph } from './drawGraph';
 import { buildRoute } from './drawRoute';
 // makes the route tubes
 
+import { buildPhoneDots } from './drawPhones';
+// making the phone ball and facing lines
+
+import type { PhoneDot } from '@/lib/spatial/phoneDots';
+// one dot for each phone
+
 import type { Destination, GraphNode, PathSegment, RouteStep } from '@/lib/spatial/contracts';
 // the real API data types (what /api/graph and /api/route send back)
 
 export type ModelStatus = 'none' | 'loading' | 'ready' | 'error';
 // lets the control panel say if the scan is still loading or failed
+
+const NO_PHONE_DOTS: PhoneDot[] = [];
+// a shared empty list for when no phones are passed in
 
 // ---------------------------------------------------------------------------
 
@@ -64,6 +73,9 @@ type SceneViewerProps = {
     routeColor: string;
     // the color of the route tubes
 
+    phoneDots?: PhoneDot[];
+    // live ohones to draw
+
 };
 
 // ---------------------------------------------------------------------------
@@ -71,7 +83,7 @@ type SceneViewerProps = {
 // VIEWER --------------------------------------------------------------------
 
 
-export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor }: SceneViewerProps) {
+export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS }: SceneViewerProps) {
     // The 3d viewer
     // React will run this 
 
@@ -454,6 +466,47 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
     // run again when the route, path, color, or world updates
 
     // -----------------------------------------
+
+    // DRAWING THE PHONES -------------
+
+    useEffect(() => {
+        // the runs when the phones move or fade or show up
+
+        const scene = sceneRef.current;
+        // taking the current 3d world
+
+        if (scene === null || phoneDots.length === 0) return;
+        // no world or no phones
+        // nothing to draw
+
+        const phoneGroup = buildPhoneDots(phoneDots, floorY);
+        // drawPhones.ts builds a ball and facing line for each phone
+
+        scene.add(phoneGroup);
+        // adding them to the 3d world
+
+        return () => {
+            // cleaning up before the next draw
+
+            scene.remove(phoneGroup);
+            // take the old balls out
+
+            phoneGroup.traverse((child) => {
+
+                if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+
+                    child.geometry.dispose();
+                    (child.material as THREE.Material).dispose();
+
+                }
+                // freeing each ball and lines memory
+
+            });
+        };
+
+    }, [phoneDots, floorY, sceneVersion]);
+
+    // DRAWING THE PHONES end ---------
 
     return <div ref={containerRef} className="relative h-full w-full" />;
     // the <div> containerRef points to
