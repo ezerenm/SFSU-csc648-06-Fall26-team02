@@ -10,7 +10,7 @@ import SceneViewer, { type ModelStatus } from './SceneViewer';
 import type { PhoneDot } from '@/lib/spatial/phoneDots';
 // one dot per live phone
 
-import type { Profile, RouteRequest, RouteResponse } from '@/lib/spatial/contracts';
+import type { Profile, RouteRequest, RouteResponse, RouteStep} from '@/lib/spatial/contracts';
 // the real API data types
 
 import { formatMeters, placeNamer, placesFor } from '@/lib/spatial/places';
@@ -52,9 +52,12 @@ type RoutePlannerProps = {
     phoneDots?: PhoneDot[];
     // live phones for the 3d view, optional so /viewer will still work with no props too
 
+    robotRouteSteps?: RouteStep[];
+    // the simulated robot's route from /live
+
 };
 
-export default function RoutePlanner({ phoneDots }: RoutePlannerProps) {
+export default function RoutePlanner({ phoneDots, robotRouteSteps }: RoutePlannerProps) {
     // viewer screen is here
 
     // Memory -------------------------
@@ -235,6 +238,8 @@ export default function RoutePlanner({ phoneDots }: RoutePlannerProps) {
                 routeColor={routeColor}
 
                 phoneDots={phoneDots}
+
+                robotRouteSteps={robotRouteSteps}
 
                 />
             </div>

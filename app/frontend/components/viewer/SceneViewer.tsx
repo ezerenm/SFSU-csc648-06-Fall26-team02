@@ -39,6 +39,13 @@ export type ModelStatus = 'none' | 'loading' | 'ready' | 'error';
 const NO_PHONE_DOTS: PhoneDot[] = [];
 // a shared empty list for when no phones are passed in
 
+const NO_ROUTE_STEPS: RouteStep[] = [];
+// one shared empty route if no robot route is passed in
+
+const ROBOT_ROUTE_COLOR = 'orange';
+// the same orange as the robot route on the 2d map
+
+
 // ---------------------------------------------------------------------------
 
 // SCENE PROPS ---------------------------------------------------------------
@@ -74,7 +81,11 @@ type SceneViewerProps = {
     // the color of the route tubes
 
     phoneDots?: PhoneDot[];
-    // live ohones to draw
+    // live phones to draw
+
+    robotRouteSteps?: RouteStep[];
+    // simulated robors route from /live
+
 
 };
 
@@ -83,7 +94,7 @@ type SceneViewerProps = {
 // VIEWER --------------------------------------------------------------------
 
 
-export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS }: SceneViewerProps) {
+export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS, robotRouteSteps = NO_ROUTE_STEPS }: SceneViewerProps) {
     // The 3d viewer
     // React will run this 
 
@@ -507,6 +518,37 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
     }, [phoneDots, floorY, sceneVersion]);
 
     // DRAWING THE PHONES end ---------
+
+    useEffect(() => {
+        // runs when the robot route changes
+
+        const scene = sceneRef.current;
+        // take the current 3d world
+
+        if (scene === null || robotRouteSteps.length === 0) return;
+        // no world or no robot route
+        // so don't draw anything
+
+        const robotRoute = buildRoute(robotRouteSteps, segments, ROBOT_ROUTE_COLOR, floorY);
+        // the same tube builder, but orange
+
+        if (robotRoute === null) return;
+        // buildRoute returns null if there are fewer than 2 points
+
+        scene.add(robotRoute);
+        // adding the orange tube to the 3d world
+
+        return () => {
+            // clean up before the next draw
+
+            scene.remove(robotRoute);
+            robotRoute.geometry.dispose();
+            (robotRoute.material as THREE.Material).dispose();
+            // free memory
+
+        };
+
+    }, [robotRouteSteps, segments, floorY, sceneVersion]);
 
     return <div ref={containerRef} className="relative h-full w-full" />;
     // the <div> containerRef points to
