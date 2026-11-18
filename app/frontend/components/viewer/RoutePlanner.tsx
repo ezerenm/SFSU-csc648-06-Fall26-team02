@@ -7,6 +7,9 @@ import { useEffect, useMemo, useState } from 'react';
 import SceneViewer, { type ModelStatus } from './SceneViewer';
 // 3d viewer
 
+import type { PhoneDot } from '@/lib/spatial/phoneDots';
+// one dot per live phone
+
 import type { Profile, RouteRequest, RouteResponse } from '@/lib/spatial/contracts';
 // the real API data types
 
@@ -43,7 +46,15 @@ const FLOOR_Y = -1.51;
 type RouteState = { key: string; pathKey: string; route: RouteResponse | null; error: string | null };
 // the last route answer, plus which start|destination|traveler it was for
 
-export default function RoutePlanner() {
+type RoutePlannerProps = {
+    // what the parent page can pass in
+
+    phoneDots?: PhoneDot[];
+    // live phones for the 3d view, optional so /viewer will still work with no props too
+
+};
+
+export default function RoutePlanner({ phoneDots }: RoutePlannerProps) {
     // viewer screen is here
 
     // Memory -------------------------
@@ -222,6 +233,8 @@ export default function RoutePlanner() {
                 routeSteps={route?.steps ?? []}
 
                 routeColor={routeColor}
+
+                phoneDots={phoneDots}
 
                 />
             </div>

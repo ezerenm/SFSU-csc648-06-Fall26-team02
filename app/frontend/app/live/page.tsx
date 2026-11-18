@@ -53,6 +53,9 @@ import { addSampleIfNew, EMPTY_COUNTS, getCaptureStatus, type CaptureCounts } fr
 import RoutePlanner from "@/components/viewer/RoutePlanner";
 // the existing 3d viewer with its route, used for the 3d tab
 
+import { phoneDotsFor } from "@/lib/spatial/phoneDots";
+// turns the live phones into 3d dots
+
 // IMPORTS end ----------------------------------------------------------------
 
 // SETTINGS -------------------------------------------------------------------
@@ -121,6 +124,10 @@ export default function LivePage() {
   const { phones, nowMs, liveError } = useLivePhones(MAP_VERSION_ID);
   // each phones newest message
   // the clock
+
+  const phoneDots = useMemo(() => phoneDotsFor(phones, nowMs), [phones, nowMs]);
+  // the same phones as the 2d map, but as 3d dots
+  // useMemo will only rebuld the list when the phones change 
 
   // Memory end -----------------------
 
@@ -507,7 +514,7 @@ export default function LivePage() {
                       // 3d tab
 
                           <div className="h-[75vh] w-full overflow-hidden rounded">
-                              <RoutePlanner />
+                              <RoutePlanner phoneDots={phoneDots}/>
                           </div>
                         
                       )}
