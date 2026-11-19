@@ -514,7 +514,7 @@ export default function LivePage() {
                       // 3d tab
 
                           <div className="h-[75vh] w-full overflow-hidden rounded">
-                              <RoutePlanner phoneDots={phoneDots} robotRouteSteps={robotRoute.route ? robotRoute.route.steps : undefined} />
+                              <RoutePlanner phoneDots={phoneDots} robotRouteSteps={robotRoute.route ? robotRoute.route.steps : undefined} capturingDeviceId={captureStatus.isCapturing && robotPhone !== null ? robotPhone.deviceId : null} />
                           </div>
                         
                       )}

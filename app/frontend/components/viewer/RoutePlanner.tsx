@@ -55,9 +55,12 @@ type RoutePlannerProps = {
     robotRouteSteps?: RouteStep[];
     // the simulated robot's route from /live
 
+    capturingDeviceId?: string | null;
+    // R12.3 phone capturing during a run from /live
+
 };
 
-export default function RoutePlanner({ phoneDots, robotRouteSteps }: RoutePlannerProps) {
+export default function RoutePlanner({ phoneDots, robotRouteSteps, capturingDeviceId }: RoutePlannerProps) {
     // viewer screen is here
 
     // Memory -------------------------
@@ -240,6 +243,8 @@ export default function RoutePlanner({ phoneDots, robotRouteSteps }: RoutePlanne
                 phoneDots={phoneDots}
 
                 robotRouteSteps={robotRouteSteps}
+
+                capturingDeviceId={capturingDeviceId}
 
                 />
             </div>

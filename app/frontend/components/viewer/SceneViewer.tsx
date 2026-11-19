@@ -24,7 +24,7 @@ import { buildGraph } from './drawGraph';
 import { buildRoute } from './drawRoute';
 // makes the route tubes
 
-import { buildPhoneDots } from './drawPhones';
+import { buildCaptureRing, buildPhoneDots, ringPulse } from './drawPhones';
 // making the phone ball and facing lines
 
 import type { PhoneDot } from '@/lib/spatial/phoneDots';
@@ -86,6 +86,9 @@ type SceneViewerProps = {
     robotRouteSteps?: RouteStep[];
     // simulated robors route from /live
 
+    capturingDeviceId?: string | null;
+    // R12.3
+
 
 };
 
@@ -94,7 +97,9 @@ type SceneViewerProps = {
 // VIEWER --------------------------------------------------------------------
 
 
-export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS, robotRouteSteps = NO_ROUTE_STEPS }: SceneViewerProps) {
+
+
+export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS, robotRouteSteps = NO_ROUTE_STEPS, capturingDeviceId = null }: SceneViewerProps) {
     // The 3d viewer
     // React will run this 
 
@@ -112,6 +117,9 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<OrbitControls | null>(null);
     // kept so the camera can be pointed at the graph once it loads
+
+    const captureRingRef = useRef<THREE.Mesh | null>(null);
+    // the current capture ring
 
     const statusRef = useRef(onModelStatus);
     useEffect(() => { statusRef.current = onModelStatus; }, [onModelStatus]);
@@ -279,6 +287,22 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
 
             controls.update();
             // match camera to users draggin / scrolling
+
+            const captureRing = captureRingRef.current;
+            // the ring
+            // if a run is on
+
+            if (captureRing !== null) {
+
+                const pulse = ringPulse(performance.now());
+                // millisends since the page opened
+
+                captureRing.scale.set(pulse.scale, pulse.scale, pulse.scale);
+                // growing it
+
+                (captureRing.material as THREE.MeshBasicMaterial).opacity = pulse.opacity;
+                // fade it
+            }
             
             renderer.render(scene, camera);
             // takes 3D scene and remakes what the camera is currently seeing onto the screen
@@ -549,6 +573,65 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
         };
 
     }, [robotRouteSteps, segments, floorY, sceneVersion]);
+
+    // DRAWING CAPTURE RING ---------------------------------------------------
+
+    useEffect(() => {
+        // runs when a run starts or stops, or when the capturing phone moves
+
+        const scene = sceneRef.current
+        // taking the current 3d world
+
+        if (scene === null || capturingDeviceId === null) return;
+        // if there is no world or run
+        // don't draw a ring
+
+        let capturingDot: PhoneDot | null = null;
+        // the dot of the phone that is capturing
+
+        for (const dot of phoneDots) {
+
+            if (dot.deviceId === capturingDeviceId) {
+
+                capturingDot = dot;
+            
+            }
+            // found the phone that is capturing
+
+        }
+
+        if (capturingDot === null) return;
+        // the capturing phone has no position yet, so theres nothing to draw under it
+
+        const ring = buildCaptureRing(capturingDot, floorY);
+        // drawPhones.ts builds the flat ring
+
+        scene.add(ring);
+        // add it ot the 3d world
+
+        captureRingRef.current = ring;
+        // let the animation loop find it so it can pulse
+
+        return () => {
+            // clean when the run stops or the phone moves
+
+            scene.remove(ring);
+
+            ring.geometry.dispose();
+            (ring.material as THREE.Material).dispose();
+            // take it out and then free the memory
+
+            captureRingRef.current = null;
+            // the animation loop stops pulsing it
+
+        };
+
+    }, [capturingDeviceId, phoneDots, floorY, sceneVersion]);
+    // run again when the run starts or stops
+    // or if the phones move
+    // or if the world is rebuilt
+
+    // DRAWING CAPTURE RING end -----------------------------------------------
 
     return <div ref={containerRef} className="relative h-full w-full" />;
     // the <div> containerRef points to
