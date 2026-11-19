@@ -124,5 +124,53 @@ return group;
 
 // MAKING DOTS end ------------------------------------------------------------
 
+// CAPTURE RING ---------------------------------------------------------------
+
+export const RING_CYCLE_MS = 1500;
+// one pulse for every 1.5 seconds
+
+export function ringPulse(elapsedMs: number): { scale: number; opacity: number } {
+    // how big and how see through the ring is
+
+    const progress = (elapsedMs % RING_CYCLE_MS) / RING_CYCLE_MS;
+    // 0 at the start of the pulse, and then almost 1 right before it restarts
+
+    const scale = 1 + progress;
+    // grows from normal size to double size
+
+    const opacity = 1 - progress;
+    // fades from solid to invisible
+
+    return { scale: scale, opacity: opacity };
+
+}
+
+export function buildCaptureRing(dot: PhoneDot, floorY = 0): THREE.Mesh {
+    // a flat ring on the floor under the phone that is capturing
+
+    const ringMaterial = new THREE.MeshBasicMaterial({
+
+        color: dot.color, transparent: true, opacity: 1, depthTest: false, side: THREE.DoubleSide,
+
+    });
+    // same color as the dot
+    // orange for the robot
+    // transparent so it can fade
+
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 32), ringMaterial);
+    // donut shape
+
+    ring.rotation.x = -Math.PI / 2;
+    // RingGeommetry stands like a wall, so we tip 90 degrees to lie flat on the floor
+
+    ring.position.set(dot.xMeters, floorY + 0.05, dot.zMeters);
+    // under the phone, just above the floor so it doesn't flicker into it
+
+    ring.renderOrder = 15;
+
+    return ring;
+}
+
+// CAPTURE RING end -----------------------------------------------------------
 
 
