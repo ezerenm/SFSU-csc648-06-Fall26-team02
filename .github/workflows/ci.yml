@@ -1,0 +1,46 @@
+name: ci
+# on pull requests, it will show up as the ci check
+
+on:
+  pull_request:
+    branches: [dev, main]
+    # runs on every pull request into dev
+    # releases pull requests into main
+
+  push:
+    branches: [dev]
+  # then runs again after each merge so that dev will always stay green
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Linux machine from Github to run on
+
+    defaults:
+      run:
+        working-directory: app/frontend
+      # app is in front end, not repo root
+
+    steps:
+      - uses: actions/checkout@v4
+      # downloads the code from the pull request
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # the same node version as Vercel
+          cache: npm
+          cache-dependency-path: app/frontend/package-lock.json
+          # reuses the downloaded packages from previous runs to speed up the build
+
+      - run: npm ci
+      # installs the dependencies from package-lock.json
+
+      - run: npx eslint .
+      # lint
+
+      - run: npm run typecheck
+      # for TypeScript errors
+
+      - run: npm test
+      # runs the node tests and routing tests

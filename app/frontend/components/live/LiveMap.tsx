@@ -81,6 +81,9 @@ type LiveMapProps = {
 
     highlightedDeviceId?: string | null;
     // the phone we're navigating with made a bit larger for visuals
+
+    capturingDeviceId?: string | null;
+    // R12.3 the phone that is currently capturing will get a ring around it as a signifier
 }
 
 // The Data end ---------------------------------------------------------------
@@ -113,7 +116,7 @@ function getDeviceColor(deviceType: DeviceType): string {
 
 // The Map --------------------------------------------------------------------
 
-export default function LiveMap({ graph, phones, nowMs, routePoints, robotRoutePoints, destinationNode, attachLine, highlightedDeviceId }: LiveMapProps ) {
+export default function LiveMap({ graph, phones, nowMs, routePoints, robotRoutePoints, destinationNode, attachLine, highlightedDeviceId, capturingDeviceId }: LiveMapProps ) {
 
     const nodes = graph.nodes;
     // every node on the map
@@ -325,6 +328,20 @@ export default function LiveMap({ graph, phones, nowMs, routePoints, robotRouteP
 
                         )}
 
+                        {phone.deviceId === capturingDeviceId && (
+                            // the only phone that is capturing data currently
+
+                            <circle cx={0} cy={0} r={dotRadius} fill="none" stroke={dotColor} strokeWidth={0.06}>
+
+                                <animate attributeName="r" values={dotRadius + ";" + (dotRadius + 0.8)} dur="1.5s" repeatCount="indefinite" />
+                                {/* the ring grows from the dot size to a little bit bigger */}
+
+                                <animate attributeName="opacity" values="1;0" dur="1.5s" repeatCount="indefinite" />
+                                {/* the ring fades out while it grows and then restarts */}
+
+                            </circle>
+                        )}
+                        
                         <circle cx={0} cy={0} r={dotRadius} fill={dotColor} stroke="#3b0764" strokeWidth={0.06} />
                         {/* the dot at 0,0 */}
 
