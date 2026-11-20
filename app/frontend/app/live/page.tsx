@@ -53,6 +53,9 @@ import { addSampleIfNew, EMPTY_COUNTS, getCaptureStatus, type CaptureCounts } fr
 import RoutePlanner from "@/components/viewer/RoutePlanner";
 // the existing 3d viewer with its route, used for the 3d tab
 
+import { phoneDotsFor } from "@/lib/spatial/phoneDots";
+// turns the live phones into 3d dots
+
 // IMPORTS end ----------------------------------------------------------------
 
 // SETTINGS -------------------------------------------------------------------
@@ -86,8 +89,8 @@ export default function LivePage() {
   // null while loading
 
 
-  const [viewMode, setViewMode] = useState<ViewMode>("2d");
-  // 2d live map or 3d viewer
+  const [viewMode, setViewMode] = useState<ViewMode>("3d");
+  // 3d main view
 
   const [destinationId, setDestinationId] = useState("");
   // the destination the user picked
@@ -121,6 +124,10 @@ export default function LivePage() {
   const { phones, nowMs, liveError } = useLivePhones(MAP_VERSION_ID);
   // each phones newest message
   // the clock
+
+  const phoneDots = useMemo(() => phoneDotsFor(phones, nowMs), [phones, nowMs]);
+  // the same phones as the 2d map, but as 3d dots
+  // useMemo will only rebuld the list when the phones change 
 
   // Memory end -----------------------
 
@@ -503,11 +510,35 @@ export default function LivePage() {
                           </div>
                       </div>
 
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+
+                              <button type="button" onClick={toggleRun}
+                                  className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
+                                  {runIsActive ? "Stop run" : "Start run"}
+                              </button>
+                              {/* R12.3 starting or stopping data collection run */}
+
+                              <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
+
+                                  {captureStatus.label}
+
+                              </span>
+                              {/* Capturing the data and waiting for the robot phone */}
+
+                              <span className="text-purple-200">
+
+                                Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
+
+                              </span>
+                              {/* Noah's run api */}
+
+                          </div>
+
                       {viewMode === "3d" && (
                       // 3d tab
 
                           <div className="h-[75vh] w-full overflow-hidden rounded">
-                              <RoutePlanner />
+                              <RoutePlanner phoneDots={phoneDots} robotRouteSteps={robotRoute.route ? robotRoute.route.steps : undefined} capturingDeviceId={captureStatus.isCapturing && robotPhone !== null ? robotPhone.deviceId : null} />
                           </div>
                         
                       )}
@@ -546,30 +577,6 @@ export default function LivePage() {
                                       </select>
                                     </label>
                                     {/* R9.2 robot destination dropdown */}
-
-                              </div>
-
-                              <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
-
-                                  <button type="button" onClick={toggleRun}
-                                      className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
-                                      {runIsActive ? "Stop run" : "Start run"}
-                                  </button>
-                                  {/* R12.3 starting or stopping data collection run */}
-
-                                  <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
-
-                                      {captureStatus.label}
-
-                                  </span>
-                                  {/* Capturing the data and waiting for the robot phone */}
-
-                                  <span className="text-purple-200">
-
-                                    Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
-
-                                  </span>
-                                  {/* Noah's run api */}
 
                               </div>
 
