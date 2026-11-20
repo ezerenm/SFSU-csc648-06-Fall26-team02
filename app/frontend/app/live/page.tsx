@@ -89,8 +89,8 @@ export default function LivePage() {
   // null while loading
 
 
-  const [viewMode, setViewMode] = useState<ViewMode>("2d");
-  // 2d live map or 3d viewer
+  const [viewMode, setViewMode] = useState<ViewMode>("3d");
+  // 3d main view
 
   const [destinationId, setDestinationId] = useState("");
   // the destination the user picked
@@ -510,6 +510,30 @@ export default function LivePage() {
                           </div>
                       </div>
 
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+
+                              <button type="button" onClick={toggleRun}
+                                  className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
+                                  {runIsActive ? "Stop run" : "Start run"}
+                              </button>
+                              {/* R12.3 starting or stopping data collection run */}
+
+                              <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
+
+                                  {captureStatus.label}
+
+                              </span>
+                              {/* Capturing the data and waiting for the robot phone */}
+
+                              <span className="text-purple-200">
+
+                                Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
+
+                              </span>
+                              {/* Noah's run api */}
+
+                          </div>
+
                       {viewMode === "3d" && (
                       // 3d tab
 
@@ -553,30 +577,6 @@ export default function LivePage() {
                                       </select>
                                     </label>
                                     {/* R9.2 robot destination dropdown */}
-
-                              </div>
-
-                              <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
-
-                                  <button type="button" onClick={toggleRun}
-                                      className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
-                                      {runIsActive ? "Stop run" : "Start run"}
-                                  </button>
-                                  {/* R12.3 starting or stopping data collection run */}
-
-                                  <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
-
-                                      {captureStatus.label}
-
-                                  </span>
-                                  {/* Capturing the data and waiting for the robot phone */}
-
-                                  <span className="text-purple-200">
-
-                                    Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
-
-                                  </span>
-                                  {/* Noah's run api */}
 
                               </div>
 
