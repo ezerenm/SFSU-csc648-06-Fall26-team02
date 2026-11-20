@@ -1,13 +1,24 @@
 // R12.4 failure list for operator
 
+import { OUTCOMES } from "./contracts";
+// every localization outcome
+
 // TYPES ----------------------------------------------------------------------
 
-export const FAILURE_TYPES = ["timeout", "tracking_loss", "network_error", "map_mismatch", "cancelled", "other_failure"];
+export const FAILURE_TYPES: string[] = [];
 // the six different failure types
 
-export const PACIFIC_OFFSET = "-08:00";
-// PST for date filter
-// -08:00 because daylight savings just ended
+for (const outcome of OUTCOMES) {
+
+    if (outcome !== "success" && outcome !== "in_progress") {
+
+        FAILURE_TYPES.push(outcome);
+        // every outcome that isn't a success or is still running = failures
+    }
+}
+
+export const PACIFIC_TIME_ZONE = "America/Los_Angeles";
+// SFSU time zone
 
 export const STATUS_LOOKBACK_SECONDS = 60;
 
@@ -52,20 +63,62 @@ export function isFailureType(value: string): boolean {
 
 // DATE FILTER ----------------------------------------------------------------
 
+export function pacificOffset(dateText: string): string {
+
+    const midnightCheck = new Date(dateText + "T08:00:00Z");
+
+    const formatter = new Intl.DateTimeFormat("en-US", { timeZone: PACIFIC_TIME_ZONE, timeZoneName: "shortOffset"});
+
+    const parts = formatter.formatToParts(midnightCheck);
+    // splits the formatted date into pieces
+
+    let offsetName = "";
+
+    for (const part of parts) {
+
+        if (part.type === "timeZoneName") {
+
+            offsetName = part.value;
+
+        }
+    }
+
+    if (offsetName === "GMT-7") {
+
+        return "-07:00";
+        // daylight time
+
+    }
+
+    return "-08:00";
+    // standard time
+
+}
+
+function nextDay(year: number, month: number, day: number): string {
+    // the date after this one as year month date format
+
+    const tomorrow = new Date(Date.UTC(year, month -1, day + 1));
+
+    return tomorrow.toISOString().slice(0, 10);
+    // keeping only the date format
+
+}
+
 export function dayRange(dateText: string): { startIso: string; endIso: string } | null {
-    // null when the data isn't year, month, day
-    // converts 2020-10-10 into the start and end of that day in PST
+    // turns 2026-10-10 into the start and end of that day in PST
+    // null when the text isnt in date format
 
     const parts = dateText.split("-");
-    // 2020=10-10 turns into ["2020","10","10"]
+    // turning 2026-10-10 into ["2026", "10",10 ]
 
     if (parts.length !== 3 || parts[0].length !== 4 || parts[1].length !== 2 || parts[2].length !== 2) {
 
         return null;
-        // null if in wrong format like 10/10/2020
+        // if its wrong format
 
     }
-
+    
     const year = Number(parts[0]);
 
     const month = Number(parts[1]);
@@ -79,37 +132,33 @@ export function dayRange(dateText: string): { startIso: string; endIso: string }
 
     }
 
-    const start = new Date(dateText + "T00:00:00" + PACIFIC_OFFSET);
-    // midnight in PST
-
-    if (Number.isNaN(start.getTime())) {
-
-        return null;
-        // Javascript can't read the date
-
-    }
-
-    const checkDay = new Date(start.getTime() - 8 * 60 * 60 * 1000);
-    // turn back 8 hours so UTC date matches PST date
+    const checkDay = new Date(Date.UTC(year, month - 1, day));
+    // if the day doesn't exist, roll over
 
     if (checkDay.getUTCFullYear() !== year || checkDay.getUTCMonth() + 1 !== month || checkDay.getUTCDate() !== day) {
 
         return null;
-        // Javascript bleeds November 21st into December 1st
-        // catch days that do not exist
+        // rolled over since the day doe not exist
 
     }
 
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-    // midnight the next day
+    const start = new Date(dateText + "T00:00:00" + pacificOffset(dateText));
+    // midniight in California
+
+    const tomorrowText = nextDay(year, month, day);
+
+    const end = new Date(tomorrowText + "T00:00:00" + pacificOffset(tomorrowText));
+    // midnight the next day, with its offset
 
     return { startIso: start.toISOString(), endIso: end.toISOString() };
 
 }
 
+
+
 // DATE FILTER end ------------------------------------------------------------
 
-// TRACKING STATS BEFORE ------------------------------------------------------
+// TRACKING STATUS BEFORE ------------------------------------------------------
 
 export function trackingStatusBefore(samples: StatusSample[], deviceId: string, failureStartedAt: string): string | null {
     // the newest status from the same phone in the minute before the failure
@@ -117,7 +166,7 @@ export function trackingStatusBefore(samples: StatusSample[], deviceId: string, 
     const failureTime = new Date(failureStartedAt).getTime();
     // when the failed attempt started
 
-    const earlestTime = failureTime - STATUS_LOOKBACK_SECONDS * 1000;
+    const earliestTime = failureTime - STATUS_LOOKBACK_SECONDS * 1000;
     // one minute before
 
     let newestSample: StatusSample | null = null;
@@ -136,7 +185,7 @@ export function trackingStatusBefore(samples: StatusSample[], deviceId: string, 
 
         const sampleTime = new Date(sample.captured_at).getTime();
 
-        if (sampleTime > failureTime || sampleTime < earlestTime) {
+        if (sampleTime > failureTime || sampleTime < earliestTime) {
 
             continue;
             // after the failure or long before it
@@ -160,11 +209,11 @@ export function trackingStatusBefore(samples: StatusSample[], deviceId: string, 
 
     }
 
-    return newestSample?.tracking_status;
+    return newestSample.tracking_status;
 
 }
 
-// TRACKING STATS BEFORE end --------------------------------------------------
+// TRACKING STATUS BEFORE end --------------------------------------------------
 
 
 

@@ -60,11 +60,11 @@ export function createHandlers(
       const result = await store.attempts(filters);
       return { ...result, limit: filters.limit, offset: filters.offset, data_origin: "synthetic" };
     }),
+    
     /**
-     * GET /api/health?map_version_id=<uuid>[&mode=live|simulation]
-     * R14 health for every evaluation test point on a visible map.
-     * Order: validate input (400) -> check the map is visible (404) -> read attempts -> compute.
-     * A point with no attempts gets an empty results list; the UI shows it as gray.
+     * GET /api/failures?map_version_id=<uuid>[&failure_type=&test_point_id=&device_id=&date=YYYY-MM-DD&limit=&offset=]
+     * R12.4 failed localization attempts for the operator, newest first, with the tracking status before each one.
+     * Order: validate input (400) -> check the map is visible (404) -> check the test point is on the map (404) -> read.
      */
     failures: (request: Request) => respond(async () => {
 
@@ -87,6 +87,12 @@ export function createHandlers(
       return { ...result, limit: filters.limit, offset: filters.offset };
     }),
 
+    /**
+     * GET /api/health?map_version_id=<uuid>[&mode=live|simulation]
+     * R14 health for every evaluation test point on a visible map.
+     * Order: validate input (400) -> check the map is visible (404) -> read attempts -> compute.
+     * A point with no attempts gets an empty results list; the UI shows it as gray.
+     */
     health: (request: Request) => respond(async () => {
       const params = query(request, ["map_version_id", "mode"]);
       const id = uuid(params.get("map_version_id"), "map_version_id");

@@ -114,54 +114,75 @@ export function supabaseRepository(client: SupabaseClient): SpatialRepository {
           const range = dayRange(filters.date)!;
 
           request = request.gte("started_at", range.startIso).lt("started_at", range.endIso);
-          // midnight to mignight pST
+          // midnight to midnight pst
         }
 
-        const { data, error, count } = await request.range(filters.offset, filters.offset + filters.limit - 1)
+        const { data, error, count, status } = await request.range(filters.offset, filters.offset + filters.limit - 1)
           .abortSignal(AbortSignal.timeout(5000));
 
-          if (error || count === null) databaseUnavailable();
+        if (status === 416 && error?.code === "PGRST103" && filters.offset > 0) {
+          // 416 is for when the page doesn't exist
 
-          const rows = (data ?? []) as unknown as FailureDatabaseRow[];
-          if (rows.length === 0) return { items: [], total: count };
+          const firstPage = await request.range(0, 0).abortSignal(AbortSignal.timeout(5000));
+          // ask for just the first row to get the real total
 
-          // read pose samples around fialures for "tracking status before"
+          if (firstPage.error || firstPage.count === null) databaseUnavailable();
 
-          const deviceIds: string[] = [];
-
-          let earliest = rows[0].started_at;
+          return { items: [], total: firstPage.count };
+          // empty page but the operator will still see how many failures there are
           
-          let latest = rows[0].started_at;
-
-          for (const row of rows) {
-
-            if (!deviceIds.includes(row.device_id)) deviceIds.push(row.device_id);
-            
-            if (row.started_at < earliest) earliest = row.started_at;
-
-            if (row.started_at > latest) latest = row.started_at;
-
         }
-        // which phones and which time window this page has
 
-        const from = new Date(new Date(earliest).getTime() - STATUS_LOOKBACK_SECONDS * 1000).toISOString();
-        // one minute before the earliest failure
+        if (error || count === null) databaseUnavailable();
 
-        const samples = await client.from("pose_samples")
+        const rows = (data ?? []) as unknown as FailureDatabaseRow[];
+        if (rows.length === 0) return { items: [], total: count };
+
+        // here?
+        async function statusBefore(row: FailureDatabaseRow): Promise<string | null> {
+          // the phones newesst status in the 60 seconds befoer this one fialure
+
+          const lookbackStart = new Date(new Date(row.started_at).getTime() - STATUS_LOOKBACK_SECONDS * 1000).toISOString();
+          // one minute before the failure started
+
+          const result = await client.from("pose_samples")
           .select("device_id,tracking_status,captured_at")
           .eq("map_version_id", filters.map_version_id)
-          .in("device_id", deviceIds)
-          .gte("captured_at", from)
-          .lte("captured_at", latest)
-          .range(0, HEALTH_ATTEMPT_LIMIT - 1)
+          .eq("device_id", row.device_id)
+          .gte("captured_at", lookbackStart)
+          .lte("captured_at", row.started_at)
+          .order("captured_at", { ascending: false })
+          .limit(1)
           .abortSignal(AbortSignal.timeout(5000));
+          // only this phone, only this minute, the newest first, so just 1 row
 
-        const statusSamples = samples.error ? [] : (samples.data ?? []) as StatusSample[];
-        // if the pose read fails, the list will still show, but the status column will be empty
+          if (result.error) return null;
+          // if this one read fails, only this one row's status is empty
+
+          return trackingStatusBefore((result.data ?? []) as StatusSample[], row.device_id, row.started_at);
+          // same helper as before
+          // given the rigt samples 
+
+        }
+
+        const statusRequests: Promise<string | null>[] = [];
+        // one status ;pplup per failure on this page 
+
+        for (const row of rows) {
+
+          statusRequests.push(statusBefore(row));
+          // start every lookup now, without waiting
+
+        }
+
+        const statuses = await Promise.all(statusRequests);
+        // wait for all of them together
 
         const items: FailureRow[] = [];
 
-        for (const row of rows) {
+        for (let index = 0; index < rows.length; index++) {
+
+          const row = rows[index];
 
           items.push({
 
@@ -175,9 +196,10 @@ export function supabaseRepository(client: SupabaseClient): SpatialRepository {
             ended_at: row.ended_at,
             mode: row.mode,
             data_origin: row.data_origin,
-            tracking_status_before: trackingStatusBefore(statusSamples, row.device_id, row.started_at),
+            tracking_status_before: statuses[index],
 
           });
+
         }
 
         return { items, total: count };
