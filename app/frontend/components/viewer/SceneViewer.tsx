@@ -33,6 +33,9 @@ import type { PhoneDot } from '@/lib/spatial/phoneDots';
 import type { Destination, GraphNode, PathSegment, RouteStep } from '@/lib/spatial/contracts';
 // the real API data types (what /api/graph and /api/route send back)
 
+import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+// splat types only
+
 export type ModelStatus = 'none' | 'loading' | 'ready' | 'error';
 // lets the control panel say if the scan is still loading or failed
 
@@ -56,6 +59,10 @@ type SceneViewerProps = {
     modelUrl: string | null;
     // .glb
     // if there is no model, a grid floor appears
+
+    splatUrl?: string | null;
+    // loads and replaces .glb
+    // if load fails, .glb shows
 
     floorY: number;
     // height of the scanned floor in the VPS frame (meters)
@@ -97,9 +104,7 @@ type SceneViewerProps = {
 // VIEWER --------------------------------------------------------------------
 
 
-
-
-export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS, robotRouteSteps = NO_ROUTE_STEPS, capturingDeviceId = null }: SceneViewerProps) {
+export default function SceneViewer({ modelUrl, splatUrl = null, floorY, onModelStatus, nodes, segments, destinations, routeSteps, routeColor, phoneDots = NO_PHONE_DOTS, robotRouteSteps = NO_ROUTE_STEPS, capturingDeviceId = null }: SceneViewerProps) {
     // The 3d viewer
     // React will run this 
 
@@ -252,6 +257,11 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
 
                     model = gltf.scene;
                     scene.add(model);
+
+                    if (splatReady) model.visible = false;
+                    // the splat finished first
+                    // keep mesh hidden
+
                     statusRef.current?.('ready');
                 },
 
@@ -265,6 +275,80 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
                 }
             );
          }
+
+         // SPLAT -------------------------------------------------------------
+
+         let sparkRenderer: SparkRenderer | null = null;
+         // spark helper
+         // draws the splats with renderer
+
+         let splat: SplatMesh | null = null;
+         // the loaded splat
+
+         let splatReady = false;
+         // true when splat is on screen
+
+         async function loadSplat(url: string) {
+            // loads spark and the splat
+            // hides mesh when splat is finally ready
+
+            try {
+
+                const sparkLibrary = await import('@sparkjsdev/spark');
+                // loads spark only in the browser
+
+                if (disposed) return;
+                // if viewer was closed when spark was loading
+
+                sparkRenderer = new sparkLibrary.SparkRenderer({ renderer });
+                scene.add(sparkRenderer);
+                // spark draws the splat with our renderer
+
+                splat = new sparkLibrary.SplatMesh({ url: url });
+                scene.add(splat);
+                // downloading the .spz file
+
+                await splat.initialized;
+                // waits until the splat is downloaded
+
+                if (disposed) return;
+                // if viewer was closed while splat was loading
+
+                splatReady = true;
+
+                renderer.setPixelRatio(1);
+                // drawing splat on normal resolution
+
+                if (model !== null) model.visible = false;
+                // hide the mesh
+                // splat shows the same room
+
+            } catch (error) {
+
+                console.error('Splat could not be loaded, keeping mesh:', error);
+                // .glb stays on screen
+
+                if (splat !== null) {
+
+                    scene.remove(splat);
+                    splat.dispose();
+                    splat = null;
+
+
+                }
+                // cleaning up the broken splat
+
+            }
+         }
+
+         if (splatUrl !== null) {
+
+            void loadSplat(splatUrl);
+            // void means start loading
+
+         }
+
+         // SPLAT end ---------------------------------------------------------
 
          // ---------------------------------------
 
@@ -375,6 +459,10 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
             if (model !== null) disposeObject(model);
             // frees the scan's meshes and textures from the GPU
 
+            if (splat !== null) splat.dispose();
+            if (sparkRenderer !== null) sparkRenderer.dispose();
+            // frees splat memory
+
             sceneRef.current = null;
             cameraRef.current = null;
             controlsRef.current = null;
@@ -383,7 +471,7 @@ export default function SceneViewer({ modelUrl, floorY, onModelStatus, nodes, se
          };
 
          // ---------------------------------------
-    }, [modelUrl, floorY]);
+    }, [modelUrl, splatUrl, floorY]);
 
     // DRAWING THE GRAPH --------------------------
 

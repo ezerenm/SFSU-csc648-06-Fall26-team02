@@ -51,7 +51,7 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
 
     for (const node of nodes) {
 
-        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18), new THREE.MeshBasicMaterial({ color: 'white', depthTest: false }));
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18), new THREE.MeshBasicMaterial({ color: 'white', depthTest: false, transparent: true }));
         // depthTest false = desks and chairs in the scan can't hide the dots
 
         ball.position.copy(toVector(node.position, 0.3, floorY));
@@ -78,8 +78,17 @@ export function buildGraph(nodes: GraphNode[], segments: PathSegment[], destinat
         // red if closed and pink if human only
         // green is open
 
-        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: lineColor, depthTest: false }));
-        // the line
+        if (points.length < 2) continue;
+        // need at least two points to make a tube
+
+        const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0);
+        // a path through the hallway points
+        // 0 = no rounding at corners
+
+        const tube = new THREE.TubeGeometry(curve, points.length * 8, 0.03, 6, false);
+        // wrapping a tube around the path
+
+        const line = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: lineColor, depthTest: false, transparent: true }))
 
         line.renderOrder = 5;
 
