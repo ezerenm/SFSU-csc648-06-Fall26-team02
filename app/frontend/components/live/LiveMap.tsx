@@ -96,7 +96,7 @@ function getDeviceColor(deviceType: DeviceType): string {
     if (deviceType === "visitor") {
 
         return SFSU_GOLD;
-        // visitor is gold
+        // visitor is the same blue as its route, like the 3d view
 
     } else if (deviceType === "robot") {
 

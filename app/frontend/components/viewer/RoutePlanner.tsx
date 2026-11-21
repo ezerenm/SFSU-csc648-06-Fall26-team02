@@ -7,7 +7,10 @@ import { useEffect, useMemo, useState } from 'react';
 import SceneViewer, { type ModelStatus } from './SceneViewer';
 // 3d viewer
 
-import type { Profile, RouteRequest, RouteResponse } from '@/lib/spatial/contracts';
+import type { PhoneDot } from '@/lib/spatial/phoneDots';
+// one dot per live phone
+
+import type { Profile, RouteRequest, RouteResponse, RouteStep} from '@/lib/spatial/contracts';
 // the real API data types
 
 import { formatMeters, placeNamer, placesFor } from '@/lib/spatial/places';
@@ -43,7 +46,21 @@ const FLOOR_Y = -1.51;
 type RouteState = { key: string; pathKey: string; route: RouteResponse | null; error: string | null };
 // the last route answer, plus which start|destination|traveler it was for
 
-export default function RoutePlanner() {
+type RoutePlannerProps = {
+    // what the parent page can pass in
+
+    phoneDots?: PhoneDot[];
+    // live phones for the 3d view, optional so /viewer will still work with no props too
+
+    robotRouteSteps?: RouteStep[];
+    // the simulated robot's route from /live
+
+    capturingDeviceId?: string | null;
+    // R12.3 phone capturing during a run from /live
+
+};
+
+export default function RoutePlanner({ phoneDots, robotRouteSteps, capturingDeviceId }: RoutePlannerProps) {
     // viewer screen is here
 
     // Memory -------------------------
@@ -223,6 +240,12 @@ export default function RoutePlanner() {
 
                 routeColor={routeColor}
 
+                phoneDots={phoneDots}
+
+                robotRouteSteps={robotRouteSteps}
+
+                capturingDeviceId={capturingDeviceId}
+
                 />
             </div>
 
@@ -339,8 +362,16 @@ export default function RoutePlanner() {
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'red' }} />Closed path segment</p>
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: '#f472b6' }} />Humans only (no robots)</p>
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'deepskyblue' }} />Person route</p>
-                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'orange' }} />Robot route</p>
+                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'orange' }} />Simulated robot route</p>
                 {/*Matching legend colors with actual colors in 3d*/}
+
+                { phoneDots !== undefined && (
+                    <>
+                        <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: 'deepskyblue' }} />Visitor phone</p>
+                        <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: 'orange' }} />Simulated robot (ring = capturing)</p>
+                    
+                    </>
+                )}
 
                 </div>
 
