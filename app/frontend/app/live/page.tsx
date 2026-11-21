@@ -467,7 +467,7 @@ export default function LivePage() {
 
     if (navigationPhone !== null && navigationPhone.latestMessage.data_origin === "synthetic") {
 
-      chipText = chipText + " . test data";
+      chipText = chipText + " · test data";
       // making sure test data isnt mixed up with real localization
 
     }
@@ -485,7 +485,7 @@ export default function LivePage() {
 
         <h1 className="text-xl font-semibold">Live Navigation</h1>
         <p className="text-xs text-purple-200">
-            {graph ? graph.site.name + " . " + graph.map_version.version_label : graphError ? "Couldn't load the map: " + graphError : "Loading map..."}
+            {graph ? graph.site.name + " · " + graph.map_version.version_label : graphError ? "Couldn't load the map: " + graphError : "Loading map…"}
 
             </p>
             {/* the side and map version */}
@@ -527,7 +527,7 @@ export default function LivePage() {
 
                               <span className="text-purple-200">
 
-                                Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
+                                Samples {captureCounts.samples} · Attempts {captureCounts.attempts} · Failures {captureCounts.failures}
 
                               </span>
                               {/* Noah's run api */}
@@ -607,11 +607,11 @@ export default function LivePage() {
 
                                 <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "#f472b6" }} />Humans only (no robots)</span>
 
-                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Route</span>
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Person route</span>
 
-                                <span><span className="mr-1.5 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: "orange" }} />Robot route</span>
+                                <span><span className="mr-1.5 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: "orange" }} />Similated robot route</span>
 
-                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#facc15" }} />Visitor</span>
+                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "deepskyblue" }} />Visitor</span>
 
                                 <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Simulated robot</span>
 
@@ -664,7 +664,7 @@ export default function LivePage() {
                                     <h2 className="font-medium text-orange-300">Simulated robot route</h2>
 
                                     {robotStart.problem && <p className="font-medium text-yellow-300">{robotStart.problem}</p>}
-                                    {robotRoute.loading && <p className="text-purple-200">Finding the robot route...</p>}
+                                    {robotRoute.loading && <p className="text-purple-200">Finding the robot route…</p>}
                                     {robotRoute.error && <p role="alert" className="font-medium text-red-300">Could not calculate the robot route: {robotRoute.error}</p>}
 
                                     {robotArrived && <p className="font-semibold text-lime-300">The robot has arrived at {robotDestination.name}.</p>}

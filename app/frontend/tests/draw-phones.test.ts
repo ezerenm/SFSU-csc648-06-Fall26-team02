@@ -15,7 +15,7 @@ function makeDot(deviceId: string, headingDegrees: number | null): PhoneDot {
 
 }
 
-test ("each dot is a ball on the floor SpotLightHelper, plus a facing line where heading is known", () => {
+test ("each dot is a ball on the floor, plus a facing line where heading is known", () => {
 
     const group = buildPhoneDots([makeDot("iphone-sumit", 90), makeDot("iphone-daksh", null)], -1.5);
 

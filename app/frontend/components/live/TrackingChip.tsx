@@ -90,7 +90,7 @@ export default function TrackingChip({ trackingColor, label, extraText }: Tracki
     return (
 
         <span
-            className={"inline-flex items-center gap-2 rounded-full borderpx-3 py-1 text-sm font-medium " + getChipClasses(trackingColor)}
+            className={"inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium " + getChipClasses(trackingColor)}
             role="status"
             aria-live="polite"
             >

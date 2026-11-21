@@ -362,8 +362,16 @@ export default function RoutePlanner({ phoneDots, robotRouteSteps, capturingDevi
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'red' }} />Closed path segment</p>
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: '#f472b6' }} />Humans only (no robots)</p>
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'deepskyblue' }} />Person route</p>
-                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'orange' }} />Robot route</p>
+                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'orange' }} />Simulated robot route</p>
                 {/*Matching legend colors with actual colors in 3d*/}
+
+                { phoneDots !== undefined && (
+                    <>
+                        <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: 'deepskyblue' }} />Visitor phone</p>
+                        <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: 'orange' }} />Simulated robot (ring = capturing)</p>
+                    
+                    </>
+                )}
 
                 </div>
 
