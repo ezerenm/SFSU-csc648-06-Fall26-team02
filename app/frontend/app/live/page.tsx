@@ -53,6 +53,9 @@ import { addSampleIfNew, EMPTY_COUNTS, getCaptureStatus, type CaptureCounts } fr
 import RoutePlanner from "@/components/viewer/RoutePlanner";
 // the existing 3d viewer with its route, used for the 3d tab
 
+import { phoneDotsFor } from "@/lib/spatial/phoneDots";
+// turns the live phones into 3d dots
+
 // IMPORTS end ----------------------------------------------------------------
 
 // SETTINGS -------------------------------------------------------------------
@@ -86,8 +89,8 @@ export default function LivePage() {
   // null while loading
 
 
-  const [viewMode, setViewMode] = useState<ViewMode>("2d");
-  // 2d live map or 3d viewer
+  const [viewMode, setViewMode] = useState<ViewMode>("3d");
+  // 3d main view
 
   const [destinationId, setDestinationId] = useState("");
   // the destination the user picked
@@ -121,6 +124,10 @@ export default function LivePage() {
   const { phones, nowMs, liveError } = useLivePhones(MAP_VERSION_ID);
   // each phones newest message
   // the clock
+
+  const phoneDots = useMemo(() => phoneDotsFor(phones, nowMs), [phones, nowMs]);
+  // the same phones as the 2d map, but as 3d dots
+  // useMemo will only rebuld the list when the phones change 
 
   // Memory end -----------------------
 
@@ -460,7 +467,7 @@ export default function LivePage() {
 
     if (navigationPhone !== null && navigationPhone.latestMessage.data_origin === "synthetic") {
 
-      chipText = chipText + " . test data";
+      chipText = chipText + " · test data";
       // making sure test data isnt mixed up with real localization
 
     }
@@ -478,7 +485,7 @@ export default function LivePage() {
 
         <h1 className="text-xl font-semibold">Live Navigation</h1>
         <p className="text-xs text-purple-200">
-            {graph ? graph.site.name + " . " + graph.map_version.version_label : graphError ? "Couldn't load the map: " + graphError : "Loading map..."}
+            {graph ? graph.site.name + " · " + graph.map_version.version_label : graphError ? "Couldn't load the map: " + graphError : "Loading map…"}
 
             </p>
             {/* the side and map version */}
@@ -503,11 +510,35 @@ export default function LivePage() {
                           </div>
                       </div>
 
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+
+                              <button type="button" onClick={toggleRun}
+                                  className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
+                                  {runIsActive ? "Stop run" : "Start run"}
+                              </button>
+                              {/* R12.3 starting or stopping data collection run */}
+
+                              <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
+
+                                  {captureStatus.label}
+
+                              </span>
+                              {/* Capturing the data and waiting for the robot phone */}
+
+                              <span className="text-purple-200">
+
+                                Samples {captureCounts.samples} · Attempts {captureCounts.attempts} · Failures {captureCounts.failures}
+
+                              </span>
+                              {/* Noah's run api */}
+
+                          </div>
+
                       {viewMode === "3d" && (
                       // 3d tab
 
                           <div className="h-[75vh] w-full overflow-hidden rounded">
-                              <RoutePlanner />
+                              <RoutePlanner phoneDots={phoneDots} robotRouteSteps={robotRoute.route ? robotRoute.route.steps : undefined} capturingDeviceId={captureStatus.isCapturing && robotPhone !== null ? robotPhone.deviceId : null} />
                           </div>
                         
                       )}
@@ -549,30 +580,6 @@ export default function LivePage() {
 
                               </div>
 
-                              <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
-
-                                  <button type="button" onClick={toggleRun}
-                                      className="rounded-md bg-[#1f5bff] px-3 py-1.5 font-semibold text-white hover:bg-[#1648cc]">
-                                      {runIsActive ? "Stop run" : "Start run"}
-                                  </button>
-                                  {/* R12.3 starting or stopping data collection run */}
-
-                                  <span className={captureStatus.isCapturing ? "font-semibold text-green-300" : "text-purple-200"}>
-
-                                      {captureStatus.label}
-
-                                  </span>
-                                  {/* Capturing the data and waiting for the robot phone */}
-
-                                  <span className="text-purple-200">
-
-                                    Samples {captureCounts.samples} . Attempts {captureCounts.attempts} . Failures {captureCounts.failures}
-
-                                  </span>
-                                  {/* Noah's run api */}
-
-                              </div>
-
                               {graph && (
                                 <LiveMap
                                   graph={graph}
@@ -600,11 +607,11 @@ export default function LivePage() {
 
                                 <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "#f472b6" }} />Humans only (no robots)</span>
 
-                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Route</span>
+                                <span><span className="mr-1.5 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: "deepskyblue" }} />Person route</span>
 
-                                <span><span className="mr-1.5 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: "orange" }} />Robot route</span>
+                                <span><span className="mr-1.5 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: "orange" }} />Similated robot route</span>
 
-                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#facc15" }} />Visitor</span>
+                                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "deepskyblue" }} />Visitor</span>
 
                                 <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "orange" }} />Simulated robot</span>
 
@@ -657,7 +664,7 @@ export default function LivePage() {
                                     <h2 className="font-medium text-orange-300">Simulated robot route</h2>
 
                                     {robotStart.problem && <p className="font-medium text-yellow-300">{robotStart.problem}</p>}
-                                    {robotRoute.loading && <p className="text-purple-200">Finding the robot route...</p>}
+                                    {robotRoute.loading && <p className="text-purple-200">Finding the robot route…</p>}
                                     {robotRoute.error && <p role="alert" className="font-medium text-red-300">Could not calculate the robot route: {robotRoute.error}</p>}
 
                                     {robotArrived && <p className="font-semibold text-lime-300">The robot has arrived at {robotDestination.name}.</p>}
