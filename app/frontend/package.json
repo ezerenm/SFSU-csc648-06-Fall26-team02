@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node scripts/test.mjs && vitest run lib/routing",
+    "test:coverage": "node scripts/test.mjs --coverage",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
