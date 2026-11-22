@@ -21,6 +21,7 @@ import { canStartFromLivePosition, type TrackingColor } from "./trackingStatus";
 
 // Picking the robot phone ----------------------------------------------------
 
+/** R9.2 Returns the newest robot proxy phone on this map, or null if no robot phone has sent anything. */
 export function pickRobotPhone(phones: PhonesByDevice): PhoneState | null {
     // the newest robot proxy phone on this map
     // null when no robot phone has sent anything
@@ -62,6 +63,7 @@ export type RobotStart = {
 
 };
 
+/** R9.2 Returns the robot's last real spot on the floor (x and z only), or null if it has no position yet. */
 export function robotPosition(phone: PhoneState | null): Xz | null {
     // the robot's last real spot on the floor (x and z only)
 
@@ -74,6 +76,7 @@ export function robotPosition(phone: PhoneState | null): Xz | null {
     return { x_m: phone.latestPosition.world_position.x_m, z_m: phone.latestPosition.world_position.z_m };
 }
 
+/** R9.2 Picks the start node for the robot route on robot-allowed paths only, or returns why there is no start. */
 export function planRobotStart(
     phone: PhoneState | null,
     trackingColor: TrackingColor,
