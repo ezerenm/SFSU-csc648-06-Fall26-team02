@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "typedoc && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "node scripts/test.mjs && vitest run lib/routing",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "docs": "typedoc"
   },
   "dependencies": {
     "@sparkjsdev/spark": "^2.4.0",
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
+    "typedoc": "^0.28.20",
     "typescript": "^5",
     "vitest": "^3.2.7"
   },

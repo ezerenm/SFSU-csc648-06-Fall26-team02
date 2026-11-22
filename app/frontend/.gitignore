@@ -20,6 +20,9 @@
 # production
 /build
 
+# generated API docs (npm run docs, also built on Vercel)
+/public/api-docs/
+
 # misc
 .DS_Store
 *.pem

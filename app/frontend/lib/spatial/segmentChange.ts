@@ -9,6 +9,7 @@ export type SegmentAction = (typeof SEGMENT_ACTIONS)[number];
 
 export type SegmentState = Pick<PathSegment, "availability" | "robot_access">;
 
+/** True if the value is one of the operator segment actions: close, reopen, humans_only, allow_robots (R8.1, R8.2, R17.1). */
 export function isSegmentAction(value: unknown): value is SegmentAction {
   return typeof value === "string" && (SEGMENT_ACTIONS as readonly string[]).includes(value);
 }
