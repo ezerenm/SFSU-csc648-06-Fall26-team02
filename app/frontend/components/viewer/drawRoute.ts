@@ -35,7 +35,7 @@ export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: s
         if (segment === undefined) continue;
         // skip if the data isn't right
 
-        const stepPoints = segment.geometry.map((point) => toVector(point, 0.15, floorY));
+        const stepPoints = segment.geometry.map((point) => toVector(point, 0.1, floorY));
         // the points for this segment
 
         if (step.from_node_id === segment.end_node_id) stepPoints.reverse();
@@ -71,7 +71,7 @@ export function buildRoute(steps: RouteStep[], segments: PathSegment[], color: s
     // 8 = how many sides around
     // false = making sure the tube doesn't close as a loop
 
-    const mesh = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color, depthTest: false }));
+    const mesh = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true }));
     // depthTest false = the route stays visible through desks in the scan
 
     mesh.renderOrder = 10;

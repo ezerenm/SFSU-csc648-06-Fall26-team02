@@ -21,6 +21,7 @@ function fail(status: 'unreachable' | 'invalid_input', reason: string, nodesExpl
   return { status, steps: [], node_ids: [], total_distance_m: null, reason, nodes_explored: nodesExplored };
 }
 
+/** True if this traveler may use the segment: it is open, and for a robot it is also robot-allowed (R5.2, R5.4). */
 export function isUsable(segment: RoutableSegment, profile: Profile): boolean {
   if (segment.availability !== 'open') return false;
   if (profile === 'robot' && segment.robot_access !== 'allowed') return false;

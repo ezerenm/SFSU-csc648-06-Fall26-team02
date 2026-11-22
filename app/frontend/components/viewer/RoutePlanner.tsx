@@ -7,11 +7,20 @@ import { useEffect, useMemo, useState } from 'react';
 import SceneViewer, { type ModelStatus } from './SceneViewer';
 // 3d viewer
 
-import type { GraphResponse, Profile, RouteRequest, RouteResponse } from '@/lib/spatial/contracts';
+import type { PhoneDot } from '@/lib/spatial/phoneDots';
+// one dot per live phone
+
+import type { Profile, RouteRequest, RouteResponse, RouteStep} from '@/lib/spatial/contracts';
 // the real API data types
 
 import { formatMeters, placeNamer, placesFor } from '@/lib/spatial/places';
 // same place names, order, and distance format as /live
+
+import { useGraph } from '@/components/live/useGraph';
+// R8.3 the graph, refreshing every 3 seconds so the path changes show without reloading
+
+import { pathStateKey } from '@/lib/spatial/pathState';
+// R8.3 key for segment closing/reopening/restrict
 
 // ----------------------------------------------------------------------------
 
@@ -26,6 +35,9 @@ const MODEL_URL = '/models/hss349-v3.glb';
 // textures resized 3072 -> 2048px JPEG so it loads fast and phones don't run out of GPU memory (9.8 MB -> 5.1 MB)
 // the mesh is already in the same VPS frame as the graph nodes, so no alignment transform
 
+const SPLAT_URL = '/models/hss349-v3.spz';
+// HSS 349 v3 Gaussian splat
+
 const FLOOR_Y = -1.51;
 // floor height in the v3 VPS frame, measured from the scan (most common floor height in the room, spread +-4 cm)
 // v3 nodes are floor positions from tape measurements with y = 0, so the viewer moves them down onto the floor
@@ -34,18 +46,30 @@ const FLOOR_Y = -1.51;
 
 // CONTROLS -------------------------------------------------------------------
 
-type RouteState = { key: string; route: RouteResponse | null; error: string | null };
+type RouteState = { key: string; pathKey: string; route: RouteResponse | null; error: string | null };
 // the last route answer, plus which start|destination|traveler it was for
 
-export default function RoutePlanner() {
+type RoutePlannerProps = {
+    // what the parent page can pass in
+
+    phoneDots?: PhoneDot[];
+    // live phones for the 3d view, optional so /viewer will still work with no props too
+
+    robotRouteSteps?: RouteStep[];
+    // the simulated robot's route from /live
+
+    capturingDeviceId?: string | null;
+    // R12.3 phone capturing during a run from /live
+
+};
+
+export default function RoutePlanner({ phoneDots, robotRouteSteps, capturingDeviceId }: RoutePlannerProps) {
     // viewer screen is here
 
     // Memory -------------------------
 
-    const [graph, setGraph] = useState<GraphResponse | null>(null);
+    const { graph, graphError, lastChange } = useGraph(MAP_VERSION_ID);
     // the graph from the database, null while loading
-
-    const [graphError, setGraphError] = useState<string | null>(null);
 
     const [modelStatus, setModelStatus] = useState<ModelStatus>('loading');
     // is the scan loading, ready, or broken
@@ -57,6 +81,10 @@ export default function RoutePlanner() {
     const [profile, setProfile] = useState<Profile>('human');
     // picking human or robot
 
+    const [showSplat, setShowSplat] = useState(false);
+    // false = mesh
+    // true = splat
+
     const [routeState, setRouteState] = useState<RouteState | null>(null);
     // empty until a route is found
 
@@ -64,24 +92,6 @@ export default function RoutePlanner() {
     // which request is waiting for the server
 
     // --------------------------------
-
-    // Loading the graph from the database ---
-
-    useEffect(() => {
-        const ctl = new AbortController();
-
-        fetch(`/api/graph?map_version_id=${MAP_VERSION_ID}`, { signal: ctl.signal, cache: 'no-store' })
-            .then(async (res) => {
-                const body = await res.json();
-                if (!res.ok) throw new Error(body?.error?.message ?? `Graph request failed (${res.status})`);
-                setGraph(body as GraphResponse);
-            })
-            .catch((e: Error) => {
-                if (e.name !== 'AbortError') setGraphError(e.message);
-            });
-
-        return () => ctl.abort();
-    }, []);
 
     const nodes = useMemo(() => graph?.nodes ?? [], [graph]);
     const segments = useMemo(() => graph?.segments ?? [], [graph]);
@@ -107,6 +117,9 @@ export default function RoutePlanner() {
 
     const route = current?.route ?? null;
 
+    const pathKey = graph ? pathStateKey(graph) : '';
+    // empty while the graph is still loading
+
     // --------------------------------
 
     // Finding route button -----------
@@ -120,21 +133,70 @@ export default function RoutePlanner() {
         const request: RouteRequest = { map_version_id: MAP_VERSION_ID, start_node_id: startNodeId, destination_id: destinationId, profile };
 
         setLoadingKey(key);
+        // button shows "Finding route..."
 
-        fetch('/api/route', {
+        fetchRoute(request, key, pathKey)
+            .finally(() => setLoadingKey((waiting) => (waiting === key ? null : waiting)));
+        // the server runs the routing on the database graph
+    
+    }
+
+    function fetchRoute(request: RouteRequest, key: string, routePathKey: string, signal?: AbortSignal) {
+        // asks /api/route and saves answer with path state it was for
+    
+
+        return fetch('/api/route', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
+            signal,
         })
+        // signal lets us cancel the request if path changes
+
             .then(async (res) => {
                 const body = await res.json();
                 if (!res.ok) throw new Error(body?.error?.message ?? `Route request failed (${res.status})`);
-                setRouteState({ key, route: body as RouteResponse, error: null });
+                setRouteState({ key, pathKey: routePathKey, route: body as RouteResponse, error: null });
+                // saving the route with its path state
+
             })
-            .catch((e: Error) => setRouteState({ key, route: null, error: e.message }))
-            .finally(() => setLoadingKey((waiting) => (waiting === key ? null : waiting)));
-        // the server runs the routing on the database graph
+            .catch((e: Error) => {
+
+                if (e.name !== 'AbortError') setRouteState({ key, pathKey: routePathKey, route: null, error: e.message });
+                // cancelled request is not an error, ignore
+
+            });
+    
     }
+
+    useEffect(() => {
+        // a route is on screen, but it was created before the last path change
+
+        if (current === null || current.pathKey === pathKey || !startNodeId || !destinationId) {
+
+            return;
+            // no route on screen so its up to date
+
+        }
+
+        const controller = new AbortController();
+        // cancel if changes come again
+
+        const request: RouteRequest = { map_version_id: MAP_VERSION_ID, start_node_id: startNodeId, destination_id: destinationId, profile };
+        // same request the button sends
+
+        fetchRoute(request, routeKey, pathKey, controller.signal);
+        // ask once again, and save the answer with a new pathKey
+
+        return () => controller.abort();
+        // clean up
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathKey, current?.key]);
+    // run again only when paths change
+
+    const rerouteNotice = lastChange && lastChange.messages.length > 0 ? lastChange.messages.join(', ') : null;
+    //R9
 
     // VISUALS ----------------------------------------------------------------
 
@@ -171,6 +233,8 @@ export default function RoutePlanner() {
 
                 modelUrl={MODEL_URL}
 
+                splatUrl={showSplat ? SPLAT_URL : null}
+
                 floorY={FLOOR_Y}
 
                 onModelStatus={setModelStatus}
@@ -184,6 +248,12 @@ export default function RoutePlanner() {
                 routeSteps={route?.steps ?? []}
 
                 routeColor={routeColor}
+
+                phoneDots={phoneDots}
+
+                robotRouteSteps={robotRouteSteps}
+
+                capturingDeviceId={capturingDeviceId}
 
                 />
             </div>
@@ -216,6 +286,7 @@ export default function RoutePlanner() {
                         <h1 className="text-lg font-semibold">Route Planner</h1>
                         <p className="text-xs text-purple-200">{subtitle}</p>
                         {scanNote && <p className="mt-1 text-xs text-yellow-200">{scanNote}</p>}
+                        {rerouteNotice && <p role="status" className="mt-1 text-xs font-medium text-orange-300">Last path change: {rerouteNotice}.{route ? ' Route recalculated.' : ''}</p>}
                     </div>
                     <button type="button" aria-label="Close route menu" onClick={() => setOpenMenu(false)} className="rounded p-1 text-2xl leading-none text-purple-100 hover:bg-white/10 md:hidden">
                         ×
@@ -260,6 +331,11 @@ export default function RoutePlanner() {
                             </label>
                         </fieldset>
 
+                        <label className="flex items-center gap-2">
+                            <input type="checkbox" className="accent-yellow-400" checked={showSplat} onChange={(event) => setShowSplat(event.target.checked)} />
+                            Splat 
+                        </label>
+
                         <button type="button" className="rounded-md bg-yellow-400 py-2 font-semibold text-gray-900 hover:bg-yellow-300 disabled:opacity-50" onClick={doFindRoute} disabled={!graph || isLoading}>
                             {/*yellow button with dark text for readability*/}
                             {/*SFSU colors btw*/}
@@ -298,9 +374,18 @@ export default function RoutePlanner() {
 
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'lime' }} />Open path segment</p>
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'red' }} />Closed path segment</p>
+                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: '#f472b6' }} />Humans only (no robots)</p>
                 <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'deepskyblue' }} />Person route</p>
-                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'orange' }} />Robot route</p>
+                <p><span className="mr-2 inline-block h-2 w-4 rounded align-middle" style={{ backgroundColor: 'orange' }} />Simulated robot route</p>
                 {/*Matching legend colors with actual colors in 3d*/}
+
+                { phoneDots !== undefined && (
+                    <>
+                        <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: 'deepskyblue' }} />Visitor phone</p>
+                        <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: 'orange' }} />Simulated robot (ring = capturing)</p>
+                    
+                    </>
+                )}
 
                 </div>
 

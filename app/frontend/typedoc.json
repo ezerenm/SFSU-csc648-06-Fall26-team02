@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "SpatialOS library API",
+  "entryPoints": ["lib/routing/index.ts", "lib/spatial/*.ts", "lib/spatial/server/*.ts"],
+  "out": "public/api-docs",
+  "readme": "none",
+  "excludePrivate": true,
+  "skipErrorChecking": true,
+  "validation": { "notExported": false, "invalidLink": true, "notDocumented": false }
+}

@@ -1,10 +1,14 @@
 import { OUTCOMES, type AttemptFilters, type Outcome, type RouteRequest } from "../contracts";
 import { ApiError } from "./errors";
 
+import { dayRange, isFailureType, type FailureFilters } from "../failures";
+
+/** Throws a 400 INVALID_REQUEST error with this message. */
 export function invalid(message: string): never {
   throw new ApiError(400, "INVALID_REQUEST", message);
 }
 
+/** Checks that a value is a UUID and returns it in lowercase; otherwise a 400 error naming the field. */
 export function uuid(value: unknown, name: string): string {
   if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
     invalid(`${name} must be a UUID.`);
@@ -12,6 +16,7 @@ export function uuid(value: unknown, name: string): string {
   return value.toLowerCase();
 }
 
+/** Returns the URL query parameters, rejecting any that are unknown or repeated (400). */
 export function query(request: Request, allowed: string[]): URLSearchParams {
   const params = new URL(request.url).searchParams;
   for (const key of params.keys()) {
@@ -30,6 +35,7 @@ function integer(value: string | null, name: string, fallback: number, min: numb
   return Number(value);
 }
 
+/** R15.1 Reads and checks the filters for GET /api/localization-attempts: map, test point, outcome, text and paging. */
 export function attemptFilters(request: Request): AttemptFilters {
   const params = query(request, ["map_version_id", "test_point_id", "outcome", "q", "limit", "offset"]);
   const filters: AttemptFilters = {
@@ -52,6 +58,7 @@ export function attemptFilters(request: Request): AttemptFilters {
   return filters;
 }
 
+/** R5.2, R5.4 Reads and checks the POST /api/route JSON body (at most 4096 bytes): map, start, destination and human or robot profile. */
 export async function routeRequest(request: Request): Promise<RouteRequest> {
   query(request, []);
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
@@ -92,3 +99,55 @@ export async function routeRequest(request: Request): Promise<RouteRequest> {
     profile: value.profile,
   };
 }
+
+// R12.4 filters for GET /api/failures
+
+export function failureFilters(request: Request): FailureFilters {
+
+  const params = query(request, ["map_version_id", "failure_type", "test_point_id", "device_id", "date", "limit", "offset" ]);
+  // only these parameters are allowed
+
+  const filters: FailureFilters = {
+
+    map_version_id: uuid(params.get("map_version_id"), "map_version_id"),
+    limit: integer(params.get("limit"), "limit", 50, 1, 100), 
+    offset: integer(params.get("offset"), "offset", 0, 0, 10000),
+
+  };
+  // the map is required
+
+  if (params.has("failure_type")) {
+
+    const failureType = params.get("failure_type")!;
+
+    if (!isFailureType(failureType)) invalid("failure_type must be timeout, tracking_loss, network_error, map_mismatch, cancelled, or other_failure.");
+
+    filters.failure_type = failureType;
+
+  }
+
+  if (params.has("test_point_id")) filters.test_point_id = uuid(params.get("test_point_id"), "test_point_id");
+
+  if (params.has("device_id")) {
+
+    const deviceId = params.get("device_id")!.trim();
+
+    if (deviceId.length < 1 || deviceId.length > 120) invalid("device_id must contain 1 to 120 characters.");
+
+    filters.device_id = deviceId;
+
+  }
+
+  if (params.has("date")) {
+
+    const date = params.get("date")!;
+
+    if (dayRange(date) === null) invalid("date must be a real day written as YYYY-MM-DD format.");
+
+    filters.date = date;
+
+  }
+
+  return filters;
+}
+

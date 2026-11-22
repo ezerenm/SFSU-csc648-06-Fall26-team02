@@ -25,6 +25,7 @@ export type SegmentAttachment = {
 
 // The closest point on a line
 
+/** Returns the point on a line between pointA and pointB that is closest to the phone. (Floor only, x and z) */
 export function closestPointOnLine(position: Xz, pointA: Xz, pointB: Xz): Xz {
     // finds a spot on the line thats closest to the phone from pointA and pointB
     // using only the floor (x and z)
@@ -83,6 +84,7 @@ export function closestPointOnLine(position: Xz, pointA: Xz, pointB: Xz): Xz {
 
 // Finding the nearest path ---------------------------------------------------
 
+/** R6.2.2 returns the open path segment closest to the phone, skipping the robot restricted segments for the robot profile. */
 export function findNearestSegment(segments: readonly PathSegment[], position: Xz, profile: Profile = "human"): SegmentAttachment | null {
     // profile = human is default
     // if the page doesn't specify, we assume user is human
@@ -145,6 +147,7 @@ export function findNearestSegment(segments: readonly PathSegment[], position: X
 
 // Live start check -----------------------------------------------------------
 
+/** R6.3 returns null if the live start is successful or a message if the phone is too far away from any of the paths. */
 export function checkLiveStart(attachment: SegmentAttachment | null): string | null {
     // r6.3 returning null if the start is okay / returning an error if there is something wrong
     // /live currently only uses one map (HSS 349), so we don't check for map_version_id yet
@@ -174,6 +177,7 @@ export function checkLiveStart(attachment: SegmentAttachment | null): string | n
 
 // Choosing the start node ----------------------------------------------------
 
+/** Picks the closer end of the "snapped to" segment as the route's start node. */
 export function startNodeForAttachment(attachment: SegmentAttachment, nodes: readonly GraphNode[]): GraphNode | null {
     // api/rooute can only start from a node, so we pick the closest end of a segment
 

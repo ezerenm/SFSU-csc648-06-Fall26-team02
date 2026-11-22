@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { timingSafeEqual } from "crypto";
 import { poseOrigin } from "@/lib/spatial/poseOrigin";
 import { poseFields, TRACKING_STATUSES } from "@/lib/spatial/poseFields";
+import { deviceTokenOk } from "@/lib/spatial/server/deviceToken";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,17 +11,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const bad = (reason: string) => NextResponse.json({ reason }, { status: 422 });
 
-function tokenOk(given: string | null) {
-  const expected = process.env.DEVICE_TOKEN;
-  if (!expected || !given) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 // POST /api/poses: the phone sends its VPS pose; the server converts and stores it.
 export async function POST(request: Request) {
-  if (!tokenOk(request.headers.get("x-device-token"))) {
+  if (!deviceTokenOk(request.headers.get("x-device-token"))) {
     return NextResponse.json({ reason: "bad token" }, { status: 401 });
   }
 
