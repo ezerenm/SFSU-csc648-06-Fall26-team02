@@ -2,7 +2,7 @@ import type { GraphResponse, RouteResponse, RoutingFunction } from "../contracts
 import { ApiError, respond } from "./errors";
 import type { SpatialRepository } from "./repository";
 import { validateRoutingResult } from "./routing";
-import { attemptFilters, invalid, query, routeRequest, uuid } from "./validation";
+import { attemptFilters, failureFilters, invalid, query, routeRequest, uuid } from "./validation";
 import { computeAllHealth, HEALTH_MODES, HEALTH_RULES, type HealthMode } from "../health";
 import { buildHealthFacts, buildSummaryPrompt, parseSummary, PROMPT_VERSION, type HealthPointView } from "../healthSummary";
 import { GeminiError, type GeminiCaller } from "./gemini";
@@ -60,6 +60,33 @@ export function createHandlers(
       const result = await store.attempts(filters);
       return { ...result, limit: filters.limit, offset: filters.offset, data_origin: "synthetic" };
     }),
+    
+    /**
+     * GET /api/failures?map_version_id=<uuid>[&failure_type=&test_point_id=&device_id=&date=YYYY-MM-DD&limit=&offset=]
+     * R12.4 failed localization attempts for the operator, newest first, with the tracking status before each one.
+     * Order: validate input (400) -> check the map is visible (404) -> check the test point is on the map (404) -> read.
+     */
+    failures: (request: Request) => respond(async () => {
+
+      const filters = failureFilters(request);
+      // 400 if the URL is bad
+
+      const store = repository();
+
+      const graph = await visibleGraph(store, filters.map_version_id);
+      // 404 if the map isn't public
+
+      if (filters.test_point_id && !graph.test_points.some((point) => point.test_point_id === filters.test_point_id)) {
+
+        throw new ApiError(404, "TEST_POINT_NOT_FOUND", "The test point is not available on this map.");
+
+      }
+
+      const result = await store.failures(filters);
+
+      return { ...result, limit: filters.limit, offset: filters.offset };
+    }),
+
     /**
      * GET /api/health?map_version_id=<uuid>[&mode=live|simulation]
      * R14 health for every evaluation test point on a visible map.
