@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "node scripts/test.mjs && vitest run lib/routing",
     "typecheck": "next typegen && tsc --noEmit",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "test:coverage": "node scripts/test.mjs --coverage"
   },
   "dependencies": {
     "@sparkjsdev/spark": "^2.4.0",
