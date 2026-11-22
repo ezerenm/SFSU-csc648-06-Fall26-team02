@@ -66,6 +66,7 @@ export type PhonesByDevice = Record<string, PhoneState>;
 
 // Comparing the two messages -------------------------------------------------
 
+/** Returns true if a phone message is newer than the one that we already have. */
 export function isNewerMessage(message: PhoneMessage, oldMessage: PhoneMessage | null): boolean {
     // true if this message is newer than oldMessage
     // the same message 2x isnt newer
@@ -93,6 +94,7 @@ export function isNewerMessage(message: PhoneMessage, oldMessage: PhoneMessage |
 
 // Adding message -------------------------------------------------------------
 
+/** Returns a new phone list with this message added, keeping the last known position. */
 export function addPhoneMessage(phones: PhonesByDevice, message: PhoneMessage): PhonesByDevice {
     // returns new obect
 
@@ -170,6 +172,7 @@ return newPhones;
 
 // Listing the phones ---------------------------------------------------------
 
+/** Turns the phone lookup into a list sorted by device_id. */
 export function listPhones(phones: PhonesByDevice): PhoneState[] {
     // turns the lookup object into a list
     // the list is sorted by device_id
@@ -193,6 +196,7 @@ export function listPhones(phones: PhonesByDevice): PhoneState[] {
 
 // Choosing the phone to navigate with ----------------------------------------
 
+/** Picks the phone /live navigates for: the visitor phone, never the robot phone. */
 export function pickNavigationPhone(phones: PhonesByDevice): PhoneState | null {
     // /live navigates for one phone
     // should be the visitor phone if it is a known phone

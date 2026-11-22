@@ -54,6 +54,7 @@ export type PhoneDot = {
 
 // DOTS -----------------------------------------------------------------------
 
+/** R19 turns the live phones into 3D dots, one for each phone that has sent a position. */
 export function phoneDotsFor(phones: PhonesByDevice, nowMs: number): PhoneDot[] {
     // one dot for each phot that had sent a position
 
