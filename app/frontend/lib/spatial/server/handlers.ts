@@ -35,6 +35,7 @@ async function healthPoints(store: SpatialRepository, id: string, mode: HealthMo
 }
 
 /**
+ * The API route handlers (graph, attempts, route, health, health summary and more), built from the database adapter so tests can pass fakes.
  * @param repository opens the database adapter per request
  * @param route routing function for POST /api/route (null until wired)
  * @param summarizer creates the Gemini caller for the health summary (null = no key configured)

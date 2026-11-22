@@ -14,6 +14,11 @@ export const TRACKING_STATUSES = ["localizing", "valid", "lost"];
 const isNum = (v: unknown): v is number =>
   typeof v === "number" && Number.isFinite(v);
 
+/**
+ * Checks a phone pose and returns the columns to store (R3.2, R4.1).
+ * A valid sample must have a numeric position and rotation; localizing and lost samples are stored without a position.
+ * @returns the pose fields, or a reason string when a valid sample is malformed
+ */
 export function poseFields(trackingStatus: string, providerPose: unknown): PoseFields | { reason: string } {
   if (trackingStatus !== "valid") {
     return { provider_pose: null, world_position: null, heading_deg: null };

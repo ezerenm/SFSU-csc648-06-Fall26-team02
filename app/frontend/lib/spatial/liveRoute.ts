@@ -8,8 +8,10 @@ export const ARRIVED_M = 1.0;
 /** The auto start node only changes when another node is this much closer (stops route flicker). */
 export const SWITCH_MARGIN_M = 0.75;
 
+/** Straight-line horizontal distance between two points, in meters. */
 export const distance = (a: Xz, b: Xz) => Math.hypot(a.x_m - b.x_m, a.z_m - b.z_m);
 
+/** The graph node closest to a position, with its distance in meters, or null when there are no nodes. */
 export function nearestNode(nodes: readonly GraphNode[], pos: Xz): { node: GraphNode; distance_m: number } | null {
   let best: { node: GraphNode; distance_m: number } | null = null;
   for (const node of nodes) {
