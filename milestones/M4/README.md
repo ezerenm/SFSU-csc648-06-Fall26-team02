@@ -73,15 +73,51 @@ after the first POST. The phone sender confirmed that the pose upload completes
 before the attempt POST. If that ordering changes, an attempt that is never
 retried will not get a later error automatically.
 
-The endpoint does not create a `navigation_sessions` run. `session_id` remains
-null for these records because the supplied phone payload has no run ID. Run
-creation and linking remain a separate integration task. The v3 test-point
-migration is merged into `dev`; confirm it was applied to the target Supabase
-database before real phone tries are sent.
+The endpoint does not create a `navigation_sessions` run. The run migration
+described below attaches each attempt to a matching run by map, device, and
+the attempt's `started_at`; the phone does not need to send a run ID. Attempts
+outside a run retain a null `session_id`. The v3 test-point migration is merged
+into `dev`; confirm it was applied to the target Supabase database before real
+phone tries are sent.
 
 The existing data definition limits a successful localization to 30 seconds.
 The phone should set `ended_at` and `latency_ms` from the localization result,
 not from the later network upload; an upload delay does not extend the attempt.
+
+## Collection runs (R11.1)
+
+The run change adds
+[`202611160001_m4_runs.sql`](../../app/backend/migrations/202611160001_m4_runs.sql)
+after the account and attempt migrations. It allows a null `device_model` when
+`/live` cannot identify the phone model, and prevents two active live robot
+runs for the same map and device. Database row-level security permits a signed-in
+developer, operator, or administrator with an active membership for the map's
+site to start and stop a run. Visitors and anonymous users cannot do either.
+
+The API accepts `Authorization: Bearer <Supabase access token>`:
+
+- `POST /api/runs` with `{ "map_version_id": "uuid", "device_id": "phone ID" }`
+  creates a live `robot_proxy` session and returns `{ "run_id": "uuid" }` (201).
+  A second active run for that map and device returns 409.
+- `PATCH /api/runs` with `{ "run_id": "uuid", "action": "stop" }` sets
+  `status: "ended"` and `ended_at`; repeating Stop returns the ended run (200).
+- `GET /api/runs/counts?run_id=<uuid>` returns
+  `{ "samples": number, "attempts": number, "failures": number }` for a run
+  on a published public demo map. Counts include records uploaded after Stop
+  whose capture time falls within the run.
+
+The run migration attaches real poses by `captured_at` and live attempts by
+`started_at` using the map, device, and run time window. `pose_samples` already
+has a nullable `session_id` from M3. Uploads outside a run leave it null. This
+is server-side association; the phone payload and `x-device-token` do not
+change. The existing `/live` button still has only local state. Ezeren's page
+integration must call the run endpoints with a signed-in team member's access
+token and retain the returned `run_id` for Stop and counts.
+
+Path segment changes remain independent of collection runs. The M4 guide asks
+for a run ID on every path change, but a map can be changed with no active run;
+the path change log needs a nullable run association. That log is not part of
+this run API.
 
 ## Verification and rollout
 
@@ -95,6 +131,9 @@ tests success-time pose selection, measured error, retry idempotency, a late
 pose linked on retry, ID collisions, and failure storage using a rolled-back
 real-point fixture. Both SQL tests
 passed locally on PostgreSQL 15; shared Supabase integration remains untested.
+[`m4_runs.sql`](../../app/backend/tests/m4_runs.sql) checks visitor denial,
+developer Start/Stop, one active run per device, and delayed pose and failure
+uploads attaching to an ended run. It passed on disposable PostgreSQL 15.
 
 The application routes and both migrations must reach the same environment
 together. Deploying the new routes before the migrations would make writes
