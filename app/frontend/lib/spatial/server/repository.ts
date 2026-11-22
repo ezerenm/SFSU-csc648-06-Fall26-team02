@@ -6,7 +6,9 @@ import { ApiError } from "./errors";
 import { FAILURE_TYPES, STATUS_LOOKBACK_SECONDS, dayRange, trackingStatusBefore, type FailureFilters, type FailureRow, type StatusSample } from "../failures";
 
 export interface SpatialRepository {
+  /** The navigation graph of one map version, or null when the map is not visible. RLS decides what is visible. */
   graph(mapVersionId: string): Promise<GraphResponse | null>;
+  /** R15.1 One page of localization attempts that match the filters, with the total count. */
   attempts(filters: AttemptFilters): Promise<{ items: LocalizationAttempt[]; total: number }>;
   /** Completed attempts of one mode on one map, for health (R14). RLS decides what is visible. */
   healthAttempts(mapVersionId: string, mode: HealthMode): Promise<HealthAttempt[]>;
@@ -220,6 +222,7 @@ function isPublishableKey(key: string): boolean {
   } catch { return false; }
 }
 
+/** The Supabase repository used by the API routes; 503 when the database connection is not configured. */
 export function createSpatialRepository(): SpatialRepository {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
