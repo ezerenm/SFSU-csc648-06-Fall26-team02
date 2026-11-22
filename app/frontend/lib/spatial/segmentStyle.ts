@@ -18,6 +18,7 @@ export const HUMANS_ONLY_SEGMENT_COLOR = "#f472b6";
 
 // CHOOSING COLORS ------------------------------------------------------------
 
+/** R8.3 returns a path segment's map color. Either red if closed, pink for humans only, or green if open. */
 export function segmentColor(segment: Pick<PathSegment, "availability" | "robot_access">): string {
 
     if (segment.availability !== "open") {

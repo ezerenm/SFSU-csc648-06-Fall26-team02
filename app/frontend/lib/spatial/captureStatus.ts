@@ -41,6 +41,7 @@ export const EMPTY_COUNTS: CaptureCounts = { samples: 0, attempts: 0, failures: 
 
 // CAPTURE STATUS -------------------------------------------------------------
 
+/** R12.3 Returns whether a run is capturing and the label shown next to Start and Stop.  */
 export function getCaptureStatus(runIsActive: boolean, robotPhone: PhoneState | null, robotTrackingColor: TrackingColor): CaptureStatus {
 
     if (!runIsActive) {
@@ -74,6 +75,7 @@ export function getCaptureStatus(runIsActive: boolean, robotPhone: PhoneState | 
 
 // COUNTING SAMPLES -----------------------------------------------------------
 
+/** R12.3 Adds one to the sample count only if this robot message hasn't been counted yet. */
 export function addSampleIfNew(counts: CaptureCounts, newSampleId: string | null, lastSampleId: string | null): CaptureCounts {
 
     if (newSampleId === null) {

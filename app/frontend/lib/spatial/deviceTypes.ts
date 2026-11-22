@@ -18,6 +18,7 @@ export const KNOWN_DEVICES = [
 
 // Getting device type --------------------------------------------------------
 
+/** R19 Looks up a phone's device_id and either returns visitor, robot, or unknown. */
 export function getDeviceType(deviceId: string): DeviceType {
     // looks up a phones device_id in hardcoded list
 
@@ -46,6 +47,7 @@ export function getDeviceType(deviceId: string): DeviceType {
 
 // Getting device name --------------------------------------------------------
 
+/** R19 Returns the name shown on the map and phone list for a device type. */
 export function getDeviceName(deviceType: DeviceType): string {
     // the word shown on the map and phone list
 
