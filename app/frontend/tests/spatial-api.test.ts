@@ -16,6 +16,7 @@ const repository: SpatialRepository = {
   graph: async (value) => value === map ? structuredClone(graph) : null,
   attempts: async () => ({ items: [], total: 0 }),
   healthAttempts: async () => [],
+  failures: async () => ({ items: [], total: 0 }),
 };
 const get = (path: string) => new Request(`http://localhost${path}`);
 const routeBody: RouteRequest = { map_version_id: map, start_node_id: id(3, 1), destination_id: id(5, 1), profile: "human" };

@@ -15,6 +15,7 @@ export const SECONDS_BEFORE_GRAY_STATUS = 5;
 
 // Getting the colors ---------------------------------------------------------
 
+/** R4.1 Returns the status chip color (either red, green, yellow, or gray) for the newest phone message. */
 export function getTrackingColor(latestMessage: LatestPhoneMessage | null, currentMs: number): TrackingColor {
 
     if (latestMessage === null) {
@@ -60,8 +61,9 @@ export function getTrackingColor(latestMessage: LatestPhoneMessage | null, curre
 
 // Getting the colors end -----------------------------------------------------
 
-// GEtting the labels ---------------------------------------------------------
+// Getting the labels ---------------------------------------------------------
 
+/** R4.1 returns the word shown on the status chip for a color. */
 export function getTrackingLabel(trackingColor: TrackingColor): string {
 
     if (trackingColor === "green") {
@@ -87,6 +89,7 @@ export function getTrackingLabel(trackingColor: TrackingColor): string {
 
 // route
 
+/** R6.4 returns true only when the chip is green, so a live start uses an accurate position. */
 export function canStartFromLivePosition(trackingColor: TrackingColor): boolean {
 
     return trackingColor === "green";
@@ -104,6 +107,7 @@ export type ChipLook = { trackingColor: TrackingColor; label: string };
 // what the chip should look like
 // the color and words
 
+/** R3.4 and R4.1 returns the chip's color and label. This includes red Time Out after 30 seconds of localizing.  */
 export function getChipLook(latestMessage: LatestPhoneMessage | null, localizingSince: string | null, currentMs: number): ChipLook {
 
     const trackingColor = getTrackingColor(latestMessage, currentMs);

@@ -23,6 +23,7 @@ const repository: SpatialRepository = {
   graph: async (id) => id === map ? structuredClone(graph) : null,
   attempts: async () => ({ items: [], total: 0 }),
   healthAttempts: async () => attempts,
+  failures: async () => ({ items: [], total: 0}),
 };
 const api = (gemini: GeminiCaller | null) => createHandlers(() => repository, null, () => gemini);
 const reply = (body: unknown): GeminiCaller => async () => ({ text: JSON.stringify(body), model_version: "gemini-test-001" });
