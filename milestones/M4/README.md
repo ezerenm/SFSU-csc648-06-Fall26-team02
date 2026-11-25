@@ -1,144 +1,124 @@
-# M4 accounts and site roles
+# Milestone 4: QA Testing and Coding Practices
 
-## Implementation status
+**SpatialOS** · SW Engineering CSC 648/848 · Section 06, Team 02 · Submitted November 22, 2026
 
-The account and role work is on `feature/noah-m4-auth-roles`. It has not been
-merged, deployed, or applied to the shared Supabase project.
+| Item | Link |
+|---|---|
+| **Submitted document** | [CSC648-848 Section 06 Milestone4 Team02.pdf](CSC648-848%20Section%2006%20Milestone4%20Team02.pdf) ([.docx](CSC648-848%20Section%2006%20Milestone4%20Team02.docx)) |
+| **Production site** | <https://sfsu-csc648-06-fall26-team02.vercel.app> (release #117, `main` at `9d76b3f`) |
+| **Generated API docs** | <https://sfsu-csc648-06-fall26-team02.vercel.app/api-docs/index.html> |
+| **Bug tracker** | [GitHub Issues, label `bug`](https://github.com/ezerenm/SFSU-csc648-06-Fall26-team02/issues?q=is%3Aissue%20label%3Abug) |
+| **Unit tests** | [`app/frontend/tests/`](../../app/frontend/tests) and [`lib/routing/findRoute.test.ts`](../../app/frontend/lib/routing/findRoute.test.ts) |
+| **CI workflow** | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
+| **Previous milestone** | [Milestone 3](../M3) |
+| **Next milestone** | [Milestone 5](../M5) |
 
-The additive migration
-[`202611080001_m4_accounts_roles.sql`](../../app/backend/migrations/202611080001_m4_accounts_roles.sql)
-creates `user_profiles` and `site_memberships`. Supabase Auth keeps passwords
-and issues the user session. The profile uses the Auth user ID; one membership
-per user and site holds exactly one of `visitor`, `developer`, `operator`, or
-`administrator`. An inactive membership grants no permissions.
-New signups automatically receive an active visitor membership for the HSS 349
-demo site. Only an administrator can grant or change operator access.
+## Contents
 
-RLS lets users read their own profile and membership. Administrators can grant,
-change, or deactivate memberships for their site. Only active operators and
-administrators can update a path segment's availability or robot access.
-Anonymous users, visitors, and developers cannot. A database trigger increments
-the map's path-state revision in the same transaction as a segment state change,
-and a no-op update does not increment it.
+| Path | What it is |
+|---|---|
+| [`CSC648-848 Section 06 Milestone4 Team02.pdf`](CSC648-848%20Section%2006%20Milestone4%20Team02.pdf) | **Submitted M4 document.** Section 1: unit tests for 10 P1 features, coverage, CI, 38 integration test cases, bug tracker. Section 2: coding style and generated documentation. |
+| This README | Results summary and what M4 added to the product |
+| [`BACKEND_HANDOFF.md`](BACKEND_HANDOFF.md) | Backend handoff (Noah Bran): accounts and site roles, live attempt ingestion, collection runs, rollout status, SQL tests |
 
-The `/account` page provides Supabase Auth sign-up, sign-in, sign-out, and a
-view of the signed-in user's memberships. It shows the account ID so a site
-administrator can assign, change, or deactivate that person's role using the
-role manager on the same page. The `/operator` page now sends the
-user's access token to `PATCH /api/segments`; the server verifies the token and
-uses the publishable key under that user's RLS permissions. The service-role key
-is no longer used by this endpoint.
+## Results
 
-## Decisions needed before rollout
+All numbers are from release #117 (`main` at `9d76b3f`), November 22, 2026.
 
-- Which existing Auth user should be bootstrapped as the first HSS 349
-  administrator. This requires a reviewed, one-time insert into
-  `site_memberships` after the migration. No account password belongs in SQL.
+| Measure | Target (M4 brief) | Result |
+|---|---|---|
+| Unit tests for P1 features | 10 features | **10 features**, 184 tests passing (171 Node test runner, 13 Vitest) |
+| Function coverage | 90% or more | **93.85%** |
+| Statement coverage | Over 50% | **92.67%** (1,113 of 1,201, Istanbul) |
+| Line and branch coverage | | 95.55% lines, 89.01% branches |
+| CI on pull requests (extra credit) | Optional | **Done:** lint, typecheck and all tests on every PR into `dev` or `main` |
+| Integration tests | 85% of P1 features | 38 cases, 37 run, **0 failures**; **48 of 51 P1 features (94.1%)** exercised: 42 full, 6 partial |
+| Bugs | Logged, assigned, resolved | **21 logged and closed**, each linked to its fix commit |
+| Coding style | Described and enforced | TypeScript-ESLint and Next.js rules (86 active rules), TypeScript strict, checked in CI |
+| Source files following the style | 85% of P1 features | Files for **45 of 51 P1 features (88%)** listed |
+| Generated documentation (extra credit) | Optional | **Done:** TypeDoc HTML, 64 of 75 public functions documented (85.3%), rebuilt on every deploy |
 
-The current account page displays the site's ID in the personal membership
-list. Demo account provisioning and live Auth settings are still needed for
-the handoff.
+### Testing at a glance
 
-The old shared operator token was requested only through Tuesday's runs. This
-branch replaces it with per-user access tokens and does not accept the old
-token. Deploy the account route only after the migration and first
-administrator membership are ready.
+```mermaid
+flowchart LR
+    PR["Pull request<br/>into dev or main"] --> CI["GitHub Actions ci"]
+    CI --> L["ESLint"]
+    CI --> TC["TypeScript strict"]
+    CI --> UT["184 unit tests"]
+    UT --> NODE["171 Node tests<br/>API handlers, health, segments,<br/>live start, Gemini check"]
+    UT --> VI["13 Vitest tests<br/>Dijkstra routing"]
+    SQL["SQL tests<br/>fresh PostgreSQL"] --> DBT["Accounts and roles,<br/>attempt ingestion, runs"]
+    REL["Release #117<br/>on production"] --> IT["37 integration cases<br/>in the browser and on the iPhone"]
+```
 
-## Live attempt ingestion (R12)
+## Unit-tested P1 features
 
-`POST /api/localization-attempts` accepts the phone's completed try with the
-same `x-device-token` used by `/api/poses`. The body requires `attempt_id`,
-`map_version_id`, `test_point_id`, `device_id`, `sdk_version`, `mode: "live"`,
-`data_origin: "live_sdk"`, `condition_label`, `camera_direction`, `started_at`,
-`ended_at`, `outcome`, `failure_reason`, and `latency_ms`. It supports the schema's
-failure outcomes: `timeout`, `tracking_loss`, `network_error`, `map_mismatch`,
-`cancelled`, and `other_failure`. A failure needs a nonempty reason. The phone's
-empty success reason becomes SQL `NULL`; its `-1` failure latency becomes SQL
-`NULL`. Invalid payloads return 422; an invalid device token returns 401.
+| # | P1 feature | Main units | Test files |
+|---|---|---|---|
+| 1 | R5.2 Shortest route for a person | `findRoute`, `MinHeap`, `server/routing` | `findRoute.test.ts`, `spatial-api.test.ts` |
+| 2 | R5.4 Robot route on robot-allowed segments | `findRoute` (robot profile), `robotRoute` | `findRoute.test.ts`, `robot-route.test.ts` |
+| 3 | R6.2.2, R6.3 Live start on the nearest open segment, reject over 2 m | `segmentAttach` | `segment-attach.test.ts` |
+| 4 | R4.1, R4.2 Tracking state, stale after 5 s | `trackingStatus`, `livePhones`, `poseFields` | `tracking-status`, `live-phones`, `pose-fields` |
+| 5 | R8.1, R8.2, R17.1, R17.2 Operator segment changes | `segmentChange` | `segment-change.test.ts` |
+| 6 | R9.1, R9.3 Reroute after a change, Unreachable | `pathState`, `liveRoute` | `path-state`, `live-route` |
+| 7 | R12.3 Capture indicator | `captureStatus` | `capture-status.test.ts` |
+| 8 | R14.1 to R14.5 Localization health | `health`, `server/handlers` | `health.test.ts`, `health-api.test.ts` |
+| 9 | R15.1 Attempt list and search | `attemptQuery`, `server/validation`, `server/repository` | `attempt-query`, `spatial-api.test.ts` |
+| 10 | R16.1 Gemini summary with every number checked | `healthSummary`, `server/gemini` | `health-summary`, `gemini`, `health-summary-api` |
 
-The server calls the service-role-only `m4_record_live_attempt` function from
-[`202611100001_m4_attempt_ingestion.sql`](../../app/backend/migrations/202611100001_m4_attempt_ingestion.sql).
-The function inserts the attempt, or returns 200 for a retry with the same ID
-and data. A reused ID with different data returns 409. New rows return 201.
-The insert and pose association happen in one database transaction.
+Gemini and Supabase are never called for real in unit tests; the tests use fixtures, a fake fetch and a fake Gemini caller.
 
-For a success, the function selects the first real, valid pose for the same map
-and device whose `captured_at` falls between the reported success time
-(`started_at + latency_ms`) and `ended_at`. It
-links that pose to the attempt. If the test point has a verified reference, it
-calculates horizontal X/Z distance in meters, stores the pose ID and error, and
-sets `error_is_valid`. An unverified point or missing qualifying pose leaves
-the error null and invalid. A retry can fill the error if a pose was uploaded
-after the first POST. The phone sender confirmed that the pose upload completes
-before the attempt POST. If that ordering changes, an attempt that is never
-retried will not get a later error automatically.
+## P1 integration coverage
 
-The endpoint does not create a `navigation_sessions` run. The run migration
-described below attaches each attempt to a matching run by map, device, and
-the attempt's `started_at`; the phone does not need to send a run ID. Attempts
-outside a run retain a null `session_id`. The v3 test-point migration is merged
-into `dev`; confirm it was applied to the target Supabase database before real
-phone tries are sent.
+| Result | P1 features | Count |
+|---|---|---|
+| Passed | R1.1 to R1.4, R2.1 to R2.4, R3.2 to R3.4, R4.1, R4.2, R5.1 to R5.4, R6.1, R6.2.1, R6.2.2, R6.3, R6.4, R8.1 to R8.3, R9.1 to R9.3, R10.2, R10.3, R12.3, R14.1 to R14.5, R15.1, R15.3, R16.1, R17.1, R17.2, R19 | 42 |
+| Passed, partial | R10.1 (robot recognized by device ID, no mode switch in the app yet); R11.1, R12.1, R12.2 (database tests only); R12.4 (API only, no operator page yet); R5.6 (robot destination picked on `/live`, not yet sent as a command) | 6 |
+| Not tested | R3.1 (needs both phones in HSS 349, planned for the Dec 1 class); R13.1, R13.2 (charts not built yet) | 3 |
 
-The existing data definition limits a successful localization to 30 seconds.
-The phone should set `ended_at` and `latency_ms` from the localization result,
-not from the later network upload; an upload delay does not extend the attempt.
+The partial and untested items are carried into the [M5 plan](../M5).
 
-## Collection runs (R11.1)
+## What M4 added
 
-The run change adds
-[`202611160001_m4_runs.sql`](../../app/backend/migrations/202611160001_m4_runs.sql)
-after the account and attempt migrations. It allows a null `device_model` when
-`/live` cannot identify the phone model, and prevents two active live robot
-runs for the same map and device. Database row-level security permits a signed-in
-developer, operator, or administrator with an active membership for the map's
-site to start and stop a run. Visitors and anonymous users cannot do either.
+| PR | What | Requirements |
+|---|---|---|
+| #75 | HSS 349 v3 scan: graph nodes and test points re-measured on the new map | R2.1 to R2.4 |
+| #76 | CI workflow: lint, typecheck and tests on every pull request | Quality |
+| #77 | Capture status on `/live` while data is collected | R12.3 |
+| #78 | Release to production (Nov 10) | |
+| #79 | Accounts and per-site roles, `/account` page, operator token replaced by sign-in; live attempt ingestion | R1.1 to R1.4, R12.1, R12.2 |
+| #80 | Failure list API (`GET /api/failures`) | R12.4 |
+| #81, #90 | Path changes and live layers on the 3D view without reloading | R8.3, R19 |
+| #82 | Gaussian splat of the scan as the 3D view | R2.2 |
+| #89 | Data collection runs (`/api/runs`, `/api/runs/counts`) | R11.1 |
+| #103 | Live map legend and dot color fixes | R19 |
+| #107, #115, #116 | `npm run test:coverage`, TypeDoc setup and doc comments, published at `/api-docs` | Documentation |
+| #117 | Release to production (Nov 22): all of the above live, M4 migrations applied | |
 
-The API accepts `Authorization: Bearer <Supabase access token>`:
+## Pages and APIs added or changed in M4
 
-- `POST /api/runs` with `{ "map_version_id": "uuid", "device_id": "phone ID" }`
-  creates a live `robot_proxy` session and returns `{ "run_id": "uuid" }` (201).
-  A second active run for that map and device returns 409.
-- `PATCH /api/runs` with `{ "run_id": "uuid", "action": "stop" }` sets
-  `status: "ended"` and `ended_at`; repeating Stop returns the ended run (200).
-- `GET /api/runs/counts?run_id=<uuid>` returns
-  `{ "samples": number, "attempts": number, "failures": number }` for a run
-  on a published public demo map. Counts include records uploaded after Stop
-  whose capture time falls within the run.
+| Page or API | Change |
+|---|---|
+| `/account` | New: sign up, sign in, sign out, your site roles, role manager for administrators |
+| `/operator` | Now requires a signed-in operator or administrator; the shared operator token is gone |
+| `/api-docs` | New: generated TypeDoc reference |
+| `POST /api/localization-attempts` | New: live attempt from the phone (`x-device-token`), idempotent by attempt ID |
+| `GET /api/failures` | New: failure list with an optional `failure_type` filter |
+| `POST /api/runs`, `PATCH /api/runs` | New: start and stop a data collection run (Supabase access token) |
+| `GET /api/runs/counts` | New: samples, attempts and failures in a run |
+| `PATCH /api/segments` | Now verifies the user's access token and runs under that user's row level security |
 
-The run migration attaches real poses by `captured_at` and live attempts by
-`started_at` using the map, device, and run time window. `pose_samples` already
-has a nullable `session_id` from M3. Uploads outside a run leave it null. This
-is server-side association; the phone payload and `x-device-token` do not
-change. The existing `/live` button still has only local state. Ezeren's page
-integration must call the run endpoints with a signed-in team member's access
-token and retain the returned `run_id` for Stop and counts.
+Environment variable change: `OPERATOR_TOKEN` is no longer used.
 
-Path segment changes remain independent of collection runs. The M4 guide asks
-for a run ID on every path change, but a map can be changed with no active run;
-the path change log needs a nullable run association. That log is not part of
-this run API.
+## Backend changes
 
-## Verification and rollout
+Three apply-once migrations were added in M4. All three were **applied to shared Supabase on Nov 22, 2026** and went live with release #117. Do not run them again.
 
-The migration was applied only to a disposable local PostgreSQL database. Run
-[`m4_accounts_roles.sql`](../../app/backend/tests/m4_accounts_roles.sql)
-after the M2 seed and M3 migration. It tests profile creation, anonymous and
-visitor denial, cross-site denial, operator and administrator access, role
-promotion rules, revision changes, and preservation of robot restrictions.
-[`m4_attempt_ingestion.sql`](../../app/backend/tests/m4_attempt_ingestion.sql)
-tests success-time pose selection, measured error, retry idempotency, a late
-pose linked on retry, ID collisions, and failure storage using a rolled-back
-real-point fixture. Both SQL tests
-passed locally on PostgreSQL 15; shared Supabase integration remains untested.
-[`m4_runs.sql`](../../app/backend/tests/m4_runs.sql) checks visitor denial,
-developer Start/Stop, one active run per device, and delayed pose and failure
-uploads attaching to an ended run. It passed on disposable PostgreSQL 15.
+| Area | What it does | Migration | Requirements |
+|---|---|---|---|
+| Accounts and site roles | One role per user and site (visitor, developer, operator, administrator), enforced by row level security; replaces the shared operator token | [`202611080001_m4_accounts_roles.sql`](../../app/backend/migrations/202611080001_m4_accounts_roles.sql) | R1.1 to R1.4 |
+| Live attempt ingestion | Saves the phone's attempts, links the matching pose and measures the error in meters; safe to retry | [`202611100001_m4_attempt_ingestion.sql`](../../app/backend/migrations/202611100001_m4_attempt_ingestion.sql) | R12.1, R12.2 |
+| Data collection runs | Start and stop a run; poses and attempts in its time window are linked to it | [`202611160001_m4_runs.sql`](../../app/backend/migrations/202611160001_m4_runs.sql) | R11.1 |
 
-The application routes and both migrations must reach the same environment
-together. Deploying the new routes before the migrations would make writes
-fail because their tables, policies, or function would be missing. Applying the
-account migration while the old service-role segment route is deployed would
-make that route increment path-state revisions twice. Coordinate the rollout
-with the team; do not run these migrations on shared Supabase until they are
-reviewed and the deployment order is agreed.
+Each migration has a SQL test in [`app/backend/tests/`](../../app/backend/tests). Request fields, response codes, access rules and test details are in the **[M4 backend handoff](BACKEND_HANDOFF.md)** by Noah Bran.
