@@ -1,9 +1,7 @@
 "use client";
 
 import Hero from "@/components/home/Hero";
-import LoginModal from "@/components/ui/login-modal";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import AboutFooter from "@/components/ui/about-footer";
 
 const steps = [
@@ -26,25 +24,14 @@ const buttonStyles = `
   `;
 
 export default function Home() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const router = useRouter();
-
-  const loginHandler = (credentials: { username: string; password: string }) => {
-    console.log("Login submitted:", credentials);
-    // Insert login logic here 
-    router.push("/dashboard");
-  };
 
   return (
     <>
       <main className="mx-auto w-full max-w-5xl items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
-        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onSubmit={loginHandler} />
-
         <Hero />
-        {/* <Link href="/dashboard" className={`${button} bg-[#1f5bff] text-white hover:bg-[#1648cc]`}><i className="mr-2">Temporary Login Button (Go to Dashboard)</i></Link> */}
-        <button className={buttonStyles} onClick={() => setIsLoginOpen(true)}>
-          Temporary Login Button (Go to Dashboard)
-        </button>
+        <Link href="/account" className={buttonStyles}>
+          Continue
+        </Link>
 
         <div className="mx-auto w-full max-w-5xl px-4 pb-12 sm:px-6">
           <ol className="grid gap-6 border-t border-[#d5dee8] pt-8 dark:border-[#1b2a40] md:grid-cols-3">

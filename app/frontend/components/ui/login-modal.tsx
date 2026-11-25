@@ -1,3 +1,5 @@
+// Possibly deprecated unless recycled as another modal
+
 "use client";
 
 import { SubmitEvent, useState } from "react";
