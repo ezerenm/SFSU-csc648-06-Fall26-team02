@@ -40,6 +40,10 @@ public class PoseUploader : MonoBehaviour
 
     // JSON bodies waiting for the server, oldest first.
     private readonly List<string> _queue = new List<string>();
+    public int Waiting => _queue.Count; // AttemptRecorder sends a try only after its poses are through
+    // When the last valid pose sample was taken. AttemptRecorder ends a successful try after this
+    // sample, so the server can link it to the try and measure the error.
+    public DateTime LastValidCapturedUtc { get; private set; } = DateTime.MinValue;
     private string _queuePath;
     private bool _queueDirty;
 
@@ -91,6 +95,8 @@ public class PoseUploader : MonoBehaviour
         Vector3 p = hasPose ? _reporter.Position : real ? Vector3.zero : new Vector3(0f, 0.2f, -1f);
         Quaternion r = hasPose ? _reporter.Rotation : real ? new Quaternion(0f, 0f, 0f, 0f) : Quaternion.identity;
         if (real && tracking == "valid" && !hasPose) tracking = "lost"; // pose dropped between frames
+        DateTime captured = DateTime.UtcNow;
+        if (hasPose) LastValidCapturedUtc = captured;
         var body = new Body
         {
             sample_id = Guid.NewGuid().ToString(),
@@ -98,7 +104,7 @@ public class PoseUploader : MonoBehaviour
             device_id = real ? _cfg.device_id : "fake-test",
             tracking_status = tracking,
             data_origin = _cfg.data_origin, // optional: "synthetic" when testing away from the real site
-            captured_at = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture),
+            captured_at = captured.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture),
             provider_pose = new ProviderPose
             {
                 position = new V3 { x = p.x, y = p.y, z = p.z },
@@ -188,6 +194,8 @@ public class PoseUploader : MonoBehaviour
     // iOS can kill a paused app without calling OnApplicationQuit, so save on pause too.
     private void OnApplicationPause(bool paused) { if (paused && _queuePath != null) SaveQueue(); }
     private void OnApplicationQuit() { if (_queuePath != null) SaveQueue(); }
+    // PoseReporter.Retry reloads the scene, which destroys this object: save first.
+    private void OnDestroy() { if (_queuePath != null) SaveQueue(); }
 
     private void OnGUI()
     {
